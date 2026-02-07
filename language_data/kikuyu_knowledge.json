@@ -1,0 +1,107 @@
+{
+  "language": "Kikuyu",
+  "grammar_rules": [
+    {
+      "rule": "Noun Classes",
+      "description": "Kikuyu nouns are classified into different classes affecting agreement",
+      "examples": [
+        "MU-A class: mũndũ (person) → andũ (people)",
+        "KI-I class: kĩrĩma (mountain) → irĩma (mountains)",
+        "MA class: maaĩ (water) - no singular form"
+      ]
+    },
+    {
+      "rule": "Verb Conjugation",
+      "description": "Verbs change based on tense, aspect, and subject",
+      "examples": [
+        "Nĩngũthoma (I will read)",
+        "Nĩndathomire (I have read)",
+        "Ndĩrathoma (I am reading)"
+      ]
+    },
+    {
+      "rule": "Tone Patterns",
+      "description": "Kikuyu is a tonal language where tone affects meaning",
+      "examples": [
+        "Different tones can change word meanings",
+        "Tone patterns help distinguish tenses"
+      ]
+    }
+  ],
+  "vocabulary": {
+    "basic_words": {
+      "mũndũ": {
+        "meaning": "person",
+        "pos": "noun",
+        "class": "mu-a",
+        "plural": "andũ",
+        "examples": [
+          "Mũndũ ũyũ nĩ mũrutani (This person is a teacher)",
+          "Andũ aingĩ nĩmendete rwĩmbo (Many people love music)"
+        ]
+      },
+      "nyũmba": {
+        "meaning": "house",
+        "pos": "noun",
+        "class": "n-n",
+        "plural": "nyũmba",
+        "examples": [
+          "Nyũmba yakwa nĩ nene (My house is big)",
+          "Nyũmba ĩno ĩrĩ na tũnyũmba tũna (This house has four rooms)"
+        ]
+      },
+      "gũthoma": {
+        "meaning": "to read/study",
+        "pos": "verb",
+        "conjugations": {
+          "present": "ndĩrathoma (I read)",
+          "past": "ndathomire (I read)",
+          "future": "nĩngũthoma (I will read)"
+        },
+        "examples": [
+          "Ndĩrathoma ibuku (I am reading a book)",
+          "Ciana irathoma kũu sukũũni (Children study at school)"
+        ]
+      }
+    },
+    "greetings": {
+      "wĩ mwega": {
+        "meaning": "you are well (greeting)",
+        "response": "ndĩ mwega",
+        "usage": "Common greeting meaning 'you are well'"
+      },
+      "ũrĩ atĩa": {
+        "meaning": "how are you",
+        "response": "ndĩ mwega",
+        "usage": "Asking about someone's wellbeing"
+      },
+      "nĩ wega": {
+        "meaning": "thank you/it's good",
+        "usage": "Expression of gratitude or agreement"
+      }
+    }
+  },
+  "common_errors": [
+    {
+      "error": "Ignoring tone patterns",
+      "correct": "Pay attention to high and low tones",
+      "example": "Tone affects meaning and grammatical function"
+    },
+    {
+      "error": "Incorrect noun class agreement",
+      "correct": "Match modifiers to noun classes",
+      "example": "Ensure adjectives agree with their nouns"
+    },
+    {
+      "error": "Wrong verb conjugation",
+      "correct": "Use appropriate tense and aspect markers",
+      "example": "Different prefixes for different tenses"
+    }
+  ],
+  "cultural_context": [
+    "Kikuyu is spoken by the Kikuyu people of central Kenya",
+    "It's part of the Bantu language family",
+    "Respect for elders is reflected in language use",
+    "Traditional proverbs (thimo) are important in communication"
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "language": "Kalenjin",
+  "grammar_rules": [
+    {
+      "rule": "Verb Conjugation",
+      "description": "Kalenjin verbs are conjugated with prefixes and suffixes for tense and person",
+      "examples": [
+        "A-som (I read)",
+        "Ki-som (You read)", 
+        "Ko-som (He/she reads)"
+      ]
+    },
+    {
+      "rule": "Noun Classes",
+      "description": "Kalenjin has different noun patterns and plural formations",
+      "examples": [
+        "biik (child) → biik (children - same form)",
+        "kot (house) → koik (houses)",
+        "chito (person) → chitosiek (people)"
+      ]
+    },
+    {
+      "rule": "Tone and Stress",
+      "description": "Kalenjin uses tone to distinguish meaning and grammatical functions",
+      "examples": [
+        "High tone vs low tone can change word meaning",
+        "Stress patterns affect verb conjugation"
+      ]
+    }
+  ],
+  "vocabulary": {
+    "basic_words": {
+      "chito": {
+        "meaning": "person",
+        "pos": "noun",
+        "plural": "chitosiek",
+        "examples": [
+          "Chito ne en kamuktaindet (This person is a teacher)",
+          "Chitosiek agobo kole muusik (Many people love music)"
+        ]
+      },
+      "kot": {
+        "meaning": "house",
+        "pos": "noun",
+        "plural": "koik",
+        "examples": [
+          "Kot ane en koot (My house is big)",
+          "Kot ne nee koik angwan (This house has four rooms)"
+        ]
+      },
+      "som": {
+        "meaning": "to read/study",
+        "pos": "verb",
+        "conjugations": {
+          "present": "asom (I read)",
+          "past": "kisom (I read)",
+          "future": "kasom (I will read)"
+        },
+        "examples": [
+          "Asom kitabu (I am reading a book)",
+          "Biik som skulen (Children study at school)"
+        ]
+      },
+      "koot": {
+        "meaning": "good/big",
+        "pos": "adjective",
+        "examples": [
+          "Chito koot (good person)",
+          "Kitabu koot (good book)",
+          "Kot koot (good house)"
+        ]
+      }
+    },
+    "greetings": {
+      "chamge": {
+        "meaning": "hello/greetings",
+        "response": "chamge",
+        "usage": "General greeting"
+      },
+      "kole nee": {
+        "meaning": "how are you",
+        "response": "kole mising",
+        "usage": "Asking about wellbeing"
+      },
+      "kongoi": {
+        "meaning": "thank you",
+        "response": "makmache",
+        "usage": "Expression of gratitude"
+      }
+    }
+  },
+  "common_errors": [
+    {
+      "error": "Ignoring tonal patterns",
+      "correct": "Pay attention to high and low tones",
+      "example": "Tone affects both meaning and grammar"
+    },
+    {
+      "error": "Incorrect verb conjugation",
+      "correct": "Use proper person and tense markers",
+      "example": "Different prefixes for different persons and tenses"
+    },
+    {
+      "error": "Wrong plural formation",
+      "correct": "Learn specific plural patterns for each noun",
+      "example": "kot → koik, chito → chitosiek"
+    }
+  ],
+  "cultural_context": [
+    "Kalenjin is spoken by the Kalenjin people of Kenya",
+    "It's part of the Nilotic language family",
+    "Age-set systems influence language use and respect",
+    "Traditional ceremonies and rituals have specific vocabulary"
+  ]
+}

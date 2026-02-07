@@ -1,0 +1,115 @@
+{
+  "language": "Luo",
+  "grammar_rules": [
+    {
+      "rule": "Verb Conjugation",
+      "description": "Luo verbs change based on tense, aspect, and subject agreement",
+      "examples": [
+        "Asomo (I read/study)",
+        "Ne asomo (I was reading)",
+        "Abiro somo (I will read)"
+      ]
+    },
+    {
+      "rule": "Noun Classes",
+      "description": "Luo nouns have different patterns for singular and plural",
+      "examples": [
+        "dhano (person) → ji (people)",
+        "ot (house) → udi (houses)",
+        "wuok (child) → nyithindo (children)"
+      ]
+    },
+    {
+      "rule": "Word Order",
+      "description": "Luo typically follows VSO (Verb-Subject-Object) order",
+      "examples": [
+        "Asomo kitabu (I read book) - A-somo kitabu",
+        "Odhi skul nyathi (Goes to school child) - Child goes to school"
+      ]
+    }
+  ],
+  "vocabulary": {
+    "basic_words": {
+      "dhano": {
+        "meaning": "person",
+        "pos": "noun",
+        "plural": "ji",
+        "examples": [
+          "Dhano-ni en japuonj (This person is a teacher)",
+          "Ji mangʼeny ohero wer (Many people love music)"
+        ]
+      },
+      "ot": {
+        "meaning": "house",
+        "pos": "noun",
+        "plural": "udi",
+        "examples": [
+          "Ot-wa duongʼ (My house is big)",
+          "Ot-ni nigi udi angʼwen (This house has four rooms)"
+        ]
+      },
+      "somo": {
+        "meaning": "to read/study",
+        "pos": "verb",
+        "conjugations": {
+          "present": "asomo (I read)",
+          "past": "ne asomo (I read)",
+          "future": "abiro somo (I will read)"
+        },
+        "examples": [
+          "Asomo kitabu (I am reading a book)",
+          "Nyithindo somo e skul (Children study at school)"
+        ]
+      },
+      "ber": {
+        "meaning": "good/beautiful",
+        "pos": "adjective",
+        "examples": [
+          "Dhano maber (good person)",
+          "Kitabu maber (good book)",
+          "Ot maber (good house)"
+        ]
+      }
+    },
+    "greetings": {
+      "oyawore": {
+        "meaning": "good morning",
+        "response": "oyawore",
+        "usage": "Morning greeting"
+      },
+      "nadi": {
+        "meaning": "how are you",
+        "response": "ber",
+        "usage": "Asking about wellbeing"
+      },
+      "erokamano": {
+        "meaning": "thank you",
+        "response": "ok",
+        "usage": "Expression of gratitude"
+      }
+    }
+  },
+  "common_errors": [
+    {
+      "error": "Using SVO instead of VSO word order",
+      "correct": "Use Verb-Subject-Object structure",
+      "example": "Wrong: 'An asomo kitabu' → Correct: 'Asomo kitabu'"
+    },
+    {
+      "error": "Incorrect plural formation",
+      "correct": "Learn irregular plural patterns",
+      "example": "dhano → ji (not dhanos)"
+    },
+    {
+      "error": "Wrong tense markers",
+      "correct": "Use appropriate tense prefixes and auxiliaries",
+      "example": "Past: 'ne asomo', Future: 'abiro somo'"
+    }
+  ],
+  "cultural_context": [
+    "Luo is spoken by the Luo people of Kenya and Tanzania",
+    "It's a Nilotic language with VSO word order",
+    "Oral tradition and storytelling are very important",
+    "Respect for elders is shown through language choices"
+  ]
+}

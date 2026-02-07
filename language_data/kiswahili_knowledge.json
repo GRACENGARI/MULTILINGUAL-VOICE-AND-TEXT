@@ -1,0 +1,123 @@
+{
+  "language": "Kiswahili",
+  "grammar_rules": [
+    {
+      "rule": "Noun Classes (Ngeli)",
+      "description": "Kiswahili nouns are grouped into classes that determine agreement patterns",
+      "examples": [
+        "M-WA class: mtu (person) → watu (people)",
+        "KI-VI class: kitabu (book) → vitabu (books)",
+        "N-N class: nyumba (house) → nyumba (houses)"
+      ]
+    },
+    {
+      "rule": "Verb Conjugation",
+      "description": "Verbs use prefixes for subject, tense, and object markers",
+      "examples": [
+        "Ninasoma (I am reading) = Ni-na-soma",
+        "Alipenda (He/she loved) = A-li-penda",
+        "Tutaenda (We will go) = Tu-ta-enda"
+      ]
+    },
+    {
+      "rule": "Adjective Agreement",
+      "description": "Adjectives must agree with their nouns in class",
+      "examples": [
+        "mtu mzuri (good person) - M-WA class",
+        "kitabu kizuri (good book) - KI-VI class",
+        "nyumba nzuri (good house) - N-N class"
+      ]
+    }
+  ],
+  "vocabulary": {
+    "basic_words": {
+      "mtu": {
+        "meaning": "person",
+        "pos": "noun",
+        "class": "m-wa",
+        "plural": "watu",
+        "examples": [
+          "Mtu huyu ni mwalimu (This person is a teacher)",
+          "Watu wengi wanapenda muziki (Many people like music)"
+        ]
+      },
+      "nyumba": {
+        "meaning": "house",
+        "pos": "noun", 
+        "class": "n-n",
+        "plural": "nyumba",
+        "examples": [
+          "Nyumba yangu ni kubwa (My house is big)",
+          "Nyumba hii ina vyumba vinne (This house has four rooms)"
+        ]
+      },
+      "kusoma": {
+        "meaning": "to read/study",
+        "pos": "verb",
+        "conjugations": {
+          "present": "ninasoma (I read)",
+          "past": "nilisoma (I read)",
+          "future": "nitasoma (I will read)"
+        },
+        "examples": [
+          "Ninasoma kitabu (I am reading a book)",
+          "Watoto wanasoma shuleni (Children study at school)"
+        ]
+      },
+      "mzuri": {
+        "meaning": "good/beautiful",
+        "pos": "adjective",
+        "agreement": {
+          "m-wa": "mzuri",
+          "ki-vi": "kizuri", 
+          "n-n": "nzuri"
+        },
+        "examples": [
+          "Mtu mzuri (good person)",
+          "Kitabu kizuri (good book)",
+          "Nyumba nzuri (good house)"
+        ]
+      }
+    },
+    "greetings": {
+      "hujambo": {
+        "meaning": "hello (formal)",
+        "response": "sijambo",
+        "usage": "Used when greeting someone respectfully"
+      },
+      "habari": {
+        "meaning": "how are you/what's the news",
+        "response": "nzuri",
+        "usage": "Common informal greeting"
+      },
+      "asante": {
+        "meaning": "thank you",
+        "response": "karibu",
+        "usage": "Expression of gratitude"
+      }
+    }
+  },
+  "common_errors": [
+    {
+      "error": "Using English word order",
+      "correct": "Use Kiswahili SVO structure",
+      "example": "Wrong: 'Mimi book ninasoma' → Correct: 'Mimi ninasoma kitabu'"
+    },
+    {
+      "error": "Incorrect noun class agreement",
+      "correct": "Match adjectives to noun classes",
+      "example": "Wrong: 'kitabu mzuri' → Correct: 'kitabu kizuri'"
+    },
+    {
+      "error": "Wrong tense markers",
+      "correct": "Use appropriate tense prefixes",
+      "example": "Wrong: 'Mimi soma' → Correct: 'Mimi ninasoma' (present continuous)"
+    }
+  ],
+  "cultural_context": [
+    "Kiswahili is widely spoken across East Africa",
+    "It incorporates words from Arabic, English, and local languages",
+    "Respect and politeness are important in Kiswahili communication",
+    "Code-switching with English is common in urban areas"
+  ]
+}
