@@ -1,0 +1,134 @@
+{
+  "language": "English",
+  "grammar_rules": [
+    {
+      "rule": "Sentence Structure",
+      "description": "English follows Subject-Verb-Object (SVO) word order",
+      "examples": [
+        "I (subject) read (verb) books (object)",
+        "She (subject) teaches (verb) students (object)",
+        "They (subject) are learning (verb) English (object)"
+      ]
+    },
+    {
+      "rule": "Verb Tenses",
+      "description": "English has 12 main tenses for expressing time",
+      "examples": [
+        "Present Simple: I study English",
+        "Present Continuous: I am studying English",
+        "Past Simple: I studied English",
+        "Past Continuous: I was studying English",
+        "Future Simple: I will study English",
+        "Present Perfect: I have studied English"
+      ]
+    },
+    {
+      "rule": "Articles",
+      "description": "English uses articles (a, an, the) before nouns",
+      "examples": [
+        "A book (indefinite, any book)",
+        "An apple (indefinite, starts with vowel sound)",
+        "The book (definite, specific book)"
+      ]
+    },
+    {
+      "rule": "Subject-Verb Agreement",
+      "description": "Subjects and verbs must agree in number",
+      "examples": [
+        "He speaks English (singular)",
+        "They speak English (plural)",
+        "The student is learning (singular)",
+        "The students are learning (plural)"
+      ]
+    }
+  ],
+  "vocabulary": {
+    "basic_words": {
+      "learn": {
+        "meaning": "to gain knowledge or skill",
+        "pos": "verb",
+        "forms": {
+          "present": "learn/learns",
+          "past": "learned/learnt",
+          "present_participle": "learning"
+        },
+        "examples": [
+          "I learn English every day",
+          "She is learning to code",
+          "They learned French last year"
+        ]
+      },
+      "knowledge": {
+        "meaning": "information and understanding",
+        "pos": "noun",
+        "examples": [
+          "Knowledge is power",
+          "She has extensive knowledge of history",
+          "Gaining knowledge takes time"
+        ]
+      },
+      "understand": {
+        "meaning": "to comprehend or grasp the meaning",
+        "pos": "verb",
+        "forms": {
+          "present": "understand/understands",
+          "past": "understood",
+          "present_participle": "understanding"
+        },
+        "examples": [
+          "I understand the lesson",
+          "Do you understand what I mean?",
+          "She understood the instructions"
+        ]
+      }
+    },
+    "greetings": {
+      "hello": {
+        "meaning": "a greeting",
+        "usage": "General greeting for any time of day",
+        "response": "Hello, Hi, Hey",
+        "formality": "neutral"
+      },
+      "good morning": {
+        "meaning": "morning greeting",
+        "usage": "Used before noon",
+        "response": "Good morning",
+        "formality": "formal/neutral"
+      },
+      "how are you": {
+        "meaning": "asking about wellbeing",
+        "usage": "Common greeting question",
+        "response": "I'm fine/good/well, thank you",
+        "formality": "neutral"
+      }
+    }
+  },
+  "common_errors": [
+    {
+      "error": "Subject-verb disagreement",
+      "correct": "Match subject and verb in number",
+      "example": "Wrong: 'He go to school' → Correct: 'He goes to school'"
+    },
+    {
+      "error": "Missing articles",
+      "correct": "Use articles before countable nouns",
+      "example": "Wrong: 'I have book' → Correct: 'I have a book'"
+    },
+    {
+      "error": "Wrong tense usage",
+      "correct": "Use appropriate tense for time reference",
+      "example": "Wrong: 'Yesterday I go' → Correct: 'Yesterday I went'"
+    },
+    {
+      "error": "Word order mistakes",
+      "correct": "Follow SVO structure",
+      "example": "Wrong: 'I book read' → Correct: 'I read a book'"
+    }
+  ],
+  "cultural_context": [
+    "English is a global language spoken by over 1.5 billion people",
+    "It's the primary language of international business and academia",
+    "English has many varieties (British, American, Australian, etc.)",
+    "Politeness and formality levels are important in English communication"
+  ]
+}

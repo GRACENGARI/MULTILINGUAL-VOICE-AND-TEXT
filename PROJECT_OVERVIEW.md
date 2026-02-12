@@ -1,20 +1,5 @@
 # 🌍 African Language AI Tutor - Project Overview
 
-## 🎯 Project Transformation
-
-This project has been successfully converted from the original **SchSpark Online Learning Platform** to an **African Language AI Tutor**, maintaining the same robust technology stack while addressing a critical gap in digital language education for African languages.
-
-## 🔄 What Changed
-
-### From SchSpark to African Language Tutor
-
-| **Original (SchSpark)** | **New (African Language Tutor)** |
-|-------------------------|-----------------------------------|
-| PDF-based FAQ chatbot | Multi-language AI tutor |
-| Single document source | Rich JSON knowledge bases |
-| General Q&A interface | Specialized language learning UI |
-| English-only support | 4 African languages supported |
-| Basic chat functionality | Interactive learning modes |
 
 ## 🛠️ Technology Stack (Maintained)
 

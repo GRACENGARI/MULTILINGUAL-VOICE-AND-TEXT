@@ -19,11 +19,24 @@ import base64
 from io import BytesIO
 
 # Load environment variables
-load_dotenv()
+load_dotenv(override=True)  # Force reload
 google_api_key = os.getenv("GOOGLE_API_KEY")
 
+# Debug: Print if key is loaded (remove after testing)
+if google_api_key:
+    st.sidebar.success(f"✅ API Key loaded: {google_api_key[:20]}...")
+else:
+    st.sidebar.error("❌ API Key not found!")
+
 if not google_api_key:
-    raise ValueError("GOOGLE_API_KEY is not set. Check your .env file.")
+    st.error("⚠️ GOOGLE_API_KEY is not set. Please check your .env file.")
+    st.info("""
+    **To fix this:**
+    1. Make sure .env file exists in the project root
+    2. Add this line: GOOGLE_API_KEY=your_actual_key_here
+    3. Restart the application
+    """)
+    st.stop()
 
 # Set page config
 st.set_page_config(
@@ -212,22 +225,15 @@ SUPPORTED_LANGUAGES = {
         "code": "ki",
         "name": "Kikuyu",
         "greeting": "Wĩ mwega! Ũkĩrĩte gũkũ kũruta Kikuyu.",
-        "description": "Learn Kikuyu grammar, vocabulary, and sentence construction",
+        "description": "Learn Kikuyu grammar, vocabulary, and sentence construction with code-switching support",
         "tts_lang": "en"  # Fallback to English for unsupported languages
     },
-    "Luo": {
-        "code": "luo",
-        "name": "Luo",
-        "greeting": "Oyawore! Rwaki e puonj Luo.",
-        "description": "Learn Luo grammar, vocabulary, and sentence construction",
-        "tts_lang": "en"  # Fallback to English
-    },
-    "Kalenjin": {
-        "code": "kal",
-        "name": "Kalenjin",
-        "greeting": "Chamge! Boisho ak kole Kalenjin.",
-        "description": "Learn Kalenjin grammar, vocabulary, and sentence construction",
-        "tts_lang": "en"  # Fallback to English
+    "English": {
+        "code": "en",
+        "name": "English",
+        "greeting": "Welcome! Let's improve your English language skills.",
+        "description": "Master English grammar, vocabulary, and communication skills",
+        "tts_lang": "en"  # Native English TTS
     }
 }
 
@@ -264,9 +270,76 @@ def create_audio_player(audio_bytes, key=None):
     if audio_bytes:
         st.audio(audio_bytes, format='audio/mp3')
 
-def get_speech_input():
-    """Get speech input from user (placeholder for future implementation)"""
-    st.info("🎤 Speech input feature coming soon! For now, please type your question.")
+def speech_to_text_interface():
+    """
+    Speech-to-text interface using Streamlit audio input
+    """
+    st.markdown("""
+    <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                padding: 1.5rem; border-radius: 0.8rem; margin: 1rem 0; color: white;'>
+        <h4>🎤 Speech Input</h4>
+        <p>Record your voice and we'll convert it to text</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Use Streamlit's audio input
+    audio_value = st.audio_input("🎙️ Click to record your question")
+    
+    if audio_value:
+        st.success("✅ Audio recorded! Processing...")
+        
+        # Save audio to temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_file:
+            tmp_file.write(audio_value.getvalue())
+            audio_path = tmp_file.name
+        
+        try:
+            # Use speech recognition
+            import speech_recognition as sr
+            recognizer = sr.Recognizer()
+            
+            with sr.AudioFile(audio_path) as source:
+                audio_data = recognizer.record(source)
+                
+            # Try to recognize speech
+            try:
+                text = recognizer.recognize_google(audio_data)
+                st.success(f"📝 Transcribed: **{text}**")
+                
+                # Store in session state so it can be used
+                if 'transcribed_text' not in st.session_state:
+                    st.session_state.transcribed_text = text
+                else:
+                    st.session_state.transcribed_text = text
+                    
+                st.info("💡 Copy the text above and paste it in the question box below!")
+                
+            except sr.UnknownValueError:
+                st.error("❌ Could not understand audio. Please speak clearly and try again.")
+            except sr.RequestError as e:
+                st.error(f"❌ Could not request results; {e}")
+                
+        except Exception as e:
+            st.error(f"Error processing audio: {str(e)}")
+            st.info("💡 Make sure you have an internet connection for speech recognition.")
+        finally:
+            # Clean up temp file
+            try:
+                os.unlink(audio_path)
+            except:
+                pass
+    else:
+        st.info("""
+        **How to use:**
+        1. Click the microphone button above
+        2. Allow microphone access if prompted
+        3. Speak your question clearly
+        4. Click stop when done
+        5. Your speech will be converted to text
+        
+        **Note:** Requires internet connection for speech recognition.
+        """)
+    
     return None
 
 # Initialize session state
@@ -280,19 +353,24 @@ if 'quiz_questions' not in st.session_state:
     st.session_state.quiz_questions = []
 if 'current_quiz_index' not in st.session_state:
     st.session_state.current_quiz_index = 0
+if 'quiz_score' not in st.session_state:
+    st.session_state.quiz_score = 0
+if 'quiz_answers' not in st.session_state:
+    st.session_state.quiz_answers = []
 if 'voice_enabled' not in st.session_state:
     st.session_state.voice_enabled = False
 if 'auto_play_responses' not in st.session_state:
     st.session_state.auto_play_responses = False
+if 'speech_input_enabled' not in st.session_state:
+    st.session_state.speech_input_enabled = False
 
 def load_language_knowledge_from_json(language):
     """Load language knowledge from JSON files"""
     try:
         filename_map = {
             "Kiswahili": "kiswahili_knowledge.json",
-            "Kikuyu": "kikuyu_knowledge.json", 
-            "Luo": "luo_knowledge.json",
-            "Kalenjin": "kalenjin_knowledge.json"
+            "Kikuyu": "kikuyu_knowledge.json",
+            "English": "english_knowledge.json"
         }
         
         if language not in filename_map:
@@ -329,12 +407,12 @@ def get_fallback_knowledge(language):
     }
 
 def initialize_llm():
-    """Initialize the language model"""
+    """Initialize the language model with optimized settings"""
     return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",  # Using the latest stable Gemini 2.5 Flash
-        temperature=0.3,
-        max_tokens=None,
-        timeout=None
+        model="gemini-2.5-flash",  # Using fast Flash model
+        temperature=0.1,  # Lower temperature for faster, more consistent responses
+        max_tokens=500,  # Limit tokens for faster generation
+        timeout=10  # 10 second timeout
     )
 
 def create_language_tutor_prompt():
@@ -583,7 +661,7 @@ def main():
         # Voice settings
         st.markdown("### 🎤 Voice Settings")
         st.session_state.voice_enabled = st.checkbox(
-            "Enable Voice Features",
+            "Enable Voice Output (TTS)",
             value=st.session_state.voice_enabled,
             help="Enable text-to-speech for responses"
         )
@@ -594,6 +672,12 @@ def main():
                 value=st.session_state.auto_play_responses,
                 help="Automatically play audio for AI responses"
             )
+        
+        st.session_state.speech_input_enabled = st.checkbox(
+            "Enable Speech Input (STT)",
+            value=st.session_state.speech_input_enabled,
+            help="Enable speech-to-text for questions"
+        )
         
         st.markdown("---")
         
@@ -698,9 +782,18 @@ def show_chat_interface(lang_info):
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### ✍️ Your Question")
     
+    # Speech input option
+    if st.session_state.speech_input_enabled:
+        speech_to_text_interface()
+        st.markdown("<br>", unsafe_allow_html=True)
+    
     with st.form("chat_form", clear_on_submit=True):
+        # Pre-fill with transcribed text if available
+        default_text = st.session_state.get('transcribed_text', '')
+        
         user_input = st.text_input(
             "Type your question here:",
+            value=default_text,
             placeholder=f"e.g., 'How do I say hello in {lang_info['name']}?' or 'Check this sentence: Mimi ninasoma'",
             label_visibility="collapsed"
         )
@@ -709,11 +802,10 @@ def show_chat_interface(lang_info):
         with col2:
             submit = st.form_submit_button("Send 📤", use_container_width=True)
         
-        # Voice input option (placeholder)
-        if st.session_state.voice_enabled:
-            st.caption("🎤 Voice input coming soon - for now, please type your question")
-        
         if submit and user_input:
+            # Clear transcribed text after using it
+            if 'transcribed_text' in st.session_state:
+                del st.session_state.transcribed_text
             handle_chat_query(user_input, vectorstore, llm, lang_info)
 
 def handle_chat_query(query, vectorstore, llm, lang_info):
@@ -760,13 +852,15 @@ def handle_chat_query(query, vectorstore, llm, lang_info):
             st.error(f"Sorry, I encountered an error: {str(e)}")
 
 def show_quiz_interface(lang_info):
-    """Display quiz practice interface"""
+    """Display quiz practice interface with scoring"""
     st.markdown(f"### 🎯 {lang_info['name']} Quiz Practice")
     
     if not st.session_state.quiz_questions:
         if st.button("🎲 Generate New Quiz"):
             st.session_state.quiz_questions = generate_quiz_questions(lang_info['name'])
             st.session_state.current_quiz_index = 0
+            st.session_state.quiz_score = 0
+            st.session_state.quiz_answers = []
             st.rerun()
         
         st.info("Click 'Generate New Quiz' to start practicing!")
@@ -775,6 +869,10 @@ def show_quiz_interface(lang_info):
     # Display current question
     if st.session_state.current_quiz_index < len(st.session_state.quiz_questions):
         current_q = st.session_state.quiz_questions[st.session_state.current_quiz_index]
+        
+        # Progress bar
+        progress = (st.session_state.current_quiz_index) / len(st.session_state.quiz_questions)
+        st.progress(progress)
         
         st.markdown(f"""
         <div class='quiz-question'>
@@ -792,13 +890,60 @@ def show_quiz_interface(lang_info):
         with col1:
             if st.button("✅ Submit Answer"):
                 if user_answer:
-                    # Here you would typically check the answer
-                    st.success("Answer submitted! (In a full implementation, this would be evaluated)")
-                    st.session_state.current_quiz_index += 1
-                    st.rerun()
+                    # Evaluate answer using LLM
+                    llm = initialize_llm()
+                    evaluation_prompt = f"""
+                    Question: {current_q['question']}
+                    User's Answer: {user_answer}
+                    Language: {lang_info['name']}
+                    
+                    Evaluate if the answer is correct. Respond in this format:
+                    CORRECT: yes/no
+                    EXPLANATION: Brief explanation
+                    CORRECT_ANSWER: The correct answer if user was wrong
+                    """
+                    
+                    try:
+                        response = llm.invoke(evaluation_prompt)
+                        evaluation = response.content
+                        
+                        # Parse evaluation
+                        is_correct = "yes" in evaluation.lower().split("correct:")[1].split("\n")[0]
+                        
+                        # Store answer
+                        st.session_state.quiz_answers.append({
+                            "question": current_q['question'],
+                            "user_answer": user_answer,
+                            "correct": is_correct,
+                            "evaluation": evaluation
+                        })
+                        
+                        if is_correct:
+                            st.session_state.quiz_score += 1
+                            st.success("✅ Correct! Well done!")
+                        else:
+                            st.error("❌ Incorrect. Let me explain:")
+                        
+                        st.markdown(f"""
+                        <div class='correction-box'>
+                            {evaluation}
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        time.sleep(2)  # Show feedback briefly
+                        st.session_state.current_quiz_index += 1
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error evaluating answer: {str(e)}")
         
         with col2:
             if st.button("⏭️ Skip Question"):
+                st.session_state.quiz_answers.append({
+                    "question": current_q['question'],
+                    "user_answer": "Skipped",
+                    "correct": False,
+                    "evaluation": "Question skipped"
+                })
                 st.session_state.current_quiz_index += 1
                 st.rerun()
         
@@ -806,14 +951,60 @@ def show_quiz_interface(lang_info):
             if st.button("🔄 New Quiz"):
                 st.session_state.quiz_questions = []
                 st.session_state.current_quiz_index = 0
+                st.session_state.quiz_score = 0
+                st.session_state.quiz_answers = []
                 st.rerun()
     
     else:
-        st.success("🎉 Quiz completed!")
-        if st.button("🔄 Start New Quiz"):
-            st.session_state.quiz_questions = []
-            st.session_state.current_quiz_index = 0
-            st.rerun()
+        # Quiz completed - show results
+        total_questions = len(st.session_state.quiz_questions)
+        score = st.session_state.quiz_score
+        percentage = (score / total_questions) * 100
+        
+        # Determine pass/fail
+        passed = percentage >= 60  # 60% passing grade
+        
+        st.markdown(f"""
+        <div style='background: linear-gradient(135deg, {"#4CAF50" if passed else "#f44336"} 0%, {"#8BC34A" if passed else "#e57373"} 100%);
+                    padding: 2rem; border-radius: 1rem; color: white; text-align: center; margin: 2rem 0;'>
+            <h2>{'🎉 Congratulations! You Passed!' if passed else '📚 Keep Practicing!'}</h2>
+            <h1 style='font-size: 3rem; margin: 1rem 0;'>{score}/{total_questions}</h1>
+            <h3>{percentage:.1f}%</h3>
+            <p style='font-size: 1.2rem; margin-top: 1rem;'>
+                {'Excellent work! You have a strong understanding.' if percentage >= 80 
+                 else 'Good job! You passed the quiz.' if passed 
+                 else "Don't worry! Review the material and try again."}
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Show detailed results
+        st.markdown("### 📊 Detailed Results")
+        
+        for i, answer in enumerate(st.session_state.quiz_answers, 1):
+            status = "✅" if answer['correct'] else "❌"
+            st.markdown(f"""
+            <div class='{"feature-box" if answer["correct"] else "correction-box"}'>
+                <strong>{status} Question {i}:</strong> {answer['question']}<br>
+                <strong>Your Answer:</strong> {answer['user_answer']}<br>
+                <strong>Evaluation:</strong> {answer['evaluation']}
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Action buttons
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Take New Quiz", use_container_width=True):
+                st.session_state.quiz_questions = []
+                st.session_state.current_quiz_index = 0
+                st.session_state.quiz_score = 0
+                st.session_state.quiz_answers = []
+                st.rerun()
+        
+        with col2:
+            if st.button("📚 Back to Learning", use_container_width=True):
+                st.session_state.current_mode = "chat"
+                st.rerun()
 
 def show_vocabulary_interface(lang_info):
     """Display vocabulary building interface"""
@@ -823,13 +1014,84 @@ def show_vocabulary_interface(lang_info):
     search_term = st.text_input("🔍 Search for a word:", placeholder="Enter a word in English or " + lang_info['name'])
     
     if search_term:
-        # In a full implementation, this would search the vocabulary database
-        st.markdown(f"""
-        <div class='feature-box'>
-            <h4>Search Results for: "{search_term}"</h4>
-            <p><em>In a full implementation, this would show vocabulary entries, definitions, examples, and audio pronunciation.</em></p>
-        </div>
-        """, unsafe_allow_html=True)
+        # Load language knowledge and search
+        knowledge_data = load_language_knowledge_from_json(st.session_state.selected_language)
+        
+        if knowledge_data:
+            vocab = knowledge_data.get('vocabulary', {})
+            found = False
+            results = []
+            
+            # Search in basic words (fuzzy search)
+            basic_words = vocab.get('basic_words', {})
+            for word, info in basic_words.items():
+                # Check if search term is in word or meaning (case-insensitive, partial match)
+                if (search_term.lower() in word.lower() or 
+                    search_term.lower() in info.get('meaning', '').lower() or
+                    any(search_term.lower() in ex.lower() for ex in info.get('examples', []))):
+                    found = True
+                    results.append(('word', word, info))
+            
+            # Search in greetings
+            greetings = vocab.get('greetings', {})
+            for greeting, info in greetings.items():
+                if (search_term.lower() in greeting.lower() or 
+                    search_term.lower() in info.get('meaning', '').lower()):
+                    found = True
+                    results.append(('greeting', greeting, info))
+            
+            # Display results
+            if found:
+                st.success(f"✅ Found {len(results)} result(s) for '{search_term}'")
+                
+                for result_type, term, info in results:
+                    if result_type == 'word':
+                        st.markdown(f"""
+                        <div class='feature-box'>
+                            <h4>📚 {term}</h4>
+                            <p><strong>Meaning:</strong> {info.get('meaning', 'N/A')}</p>
+                            <p><strong>Part of Speech:</strong> {info.get('pos', 'N/A')}</p>
+                            {'<p><strong>Plural:</strong> ' + info.get('plural', '') + '</p>' if 'plural' in info else ''}
+                            {'<p><strong>Class:</strong> ' + info.get('class', '') + '</p>' if 'class' in info else ''}
+                            <p><strong>Examples:</strong></p>
+                            <ul>
+                            {''.join(['<li>' + ex + '</li>' for ex in info.get('examples', [])])}
+                            </ul>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:  # greeting
+                        st.markdown(f"""
+                        <div class='feature-box'>
+                            <h4>👋 {term}</h4>
+                            <p><strong>Meaning:</strong> {info.get('meaning', 'N/A')}</p>
+                            <p><strong>Response:</strong> {info.get('response', 'N/A')}</p>
+                            <p><strong>Usage:</strong> {info.get('usage', 'N/A')}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Add audio button if voice enabled
+                    if st.session_state.voice_enabled:
+                        col1, col2, col3 = st.columns([1, 2, 1])
+                        with col2:
+                            if st.button(f"🔊 Pronounce '{term}'", key=f"vocab_{term}", use_container_width=True):
+                                audio = text_to_speech(term, lang_info['tts_lang'])
+                                if audio:
+                                    create_audio_player(audio, key=f"vocab_audio_{term}")
+            else:
+                st.warning(f"❌ No results found for '{search_term}'")
+                st.info(f"""
+                **Suggestions:**
+                - Try searching for common words like: 'person', 'house', 'read', 'hello'
+                - Browse categories below to explore available vocabulary
+                - Check spelling - some words use special characters (ũ, ĩ, etc.)
+                
+                **Available words in {lang_info['name']}:** {', '.join(list(basic_words.keys())[:5])}...
+                """)
+        else:
+            st.error("Could not load vocabulary data.")
+    else:
+        # Show sample words when no search
+        st.info(f"💡 Try searching for: **person**, **house**, **hello**, or **thank you**")
     
     # Common vocabulary categories
     st.markdown("### 📚 Browse by Category")
@@ -840,8 +1102,8 @@ def show_vocabulary_interface(lang_info):
     for i, category in enumerate(categories):
         col = cols[i % 4]
         with col:
-            if st.button(f"📂 {category}", use_container_width=True):
-                st.info(f"Loading {category} vocabulary... (Feature in development)")
+            if st.button(f"📂 {category}", use_container_width=True, key=f"cat_{category}"):
+                st.info(f"📖 {category} vocabulary coming soon! Use search above to find specific words.")
 
 if __name__ == "__main__":
     main()
