@@ -20,13 +20,26 @@ from io import BytesIO
 
 # Load environment variables
 load_dotenv(override=True)  # Force reload
-google_api_key = os.getenv("GOOGLE_API_KEY")
 
-# Debug: Print if key is loaded (remove after testing)
+# Try to get API key from multiple sources (for different deployment platforms)
+google_api_key = None
+
+# 1. Try Streamlit secrets (for Streamlit Cloud deployment)
+try:
+    google_api_key = st.secrets["GOOGLE_API_KEY"]
+except:
+    pass
+
+# 2. Try environment variable (for local development and other platforms)
+if not google_api_key:
+    google_api_key = os.getenv("GOOGLE_API_KEY")
+
+# Debug: Print if key is loaded
 if google_api_key:
     st.sidebar.success(f"✅ API Key loaded: {google_api_key[:20]}...")
 else:
     st.sidebar.error("❌ API Key not found!")
+
 
 if not google_api_key:
     st.error("⚠️ GOOGLE_API_KEY is not set. Please check your .env file.")
