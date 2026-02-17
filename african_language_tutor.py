@@ -3,8 +3,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.chains.retrieval import create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 from dotenv import load_dotenv
@@ -997,26 +995,22 @@ def handle_chat_query(query, vectorstore, llm, lang_info):
             # Create prompt template
             prompt_template = create_language_tutor_prompt()
             
+            # Retrieve relevant context if vectorstore available
+            context = ""
             if vectorstore:
-                # Use RAG if knowledge base available
                 retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
-                question_answer_chain = create_stuff_documents_chain(llm, prompt_template)
-                rag_chain = create_retrieval_chain(retriever, question_answer_chain)
-                
-                response = rag_chain.invoke({
-                    "input": query,
-                    "language": lang_info['name']
-                })
-                answer = response["answer"]
-            else:
-                # Direct LLM query
-                formatted_prompt = prompt_template.format_messages(
-                    language=lang_info['name'],
-                    context="",
-                    input=query
-                )
-                response = llm.invoke(formatted_prompt)
-                answer = response.content
+                docs = retriever.get_relevant_documents(query)
+                context = "\n\n".join([doc.page_content for doc in docs])
+            
+            # Format prompt with context
+            formatted_prompt = prompt_template.format_messages(
+                language=lang_info['name'],
+                context=context if context else "No specific context available.",
+                input=query
+            
+            # Generate response
+            response = llm.invoke(formatted_prompt)
+            answer = response.content
             
             st.session_state.chat_history.append({"role": "assistant", "content": answer})
             
