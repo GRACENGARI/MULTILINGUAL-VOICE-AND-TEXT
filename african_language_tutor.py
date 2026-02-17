@@ -1007,7 +1007,7 @@ def handle_chat_query(query, vectorstore, llm, lang_info):
                 language=lang_info['name'],
                 context=context if context else "No specific context available.",
                 input=query
-            
+            )
             # Generate response
             response = llm.invoke(formatted_prompt)
             answer = response.content
