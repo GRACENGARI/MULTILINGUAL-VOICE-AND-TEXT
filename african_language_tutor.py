@@ -225,7 +225,7 @@ SUPPORTED_LANGUAGES = {
         "code": "ki",
         "name": "Kikuyu",
         "greeting": "Wĩ mwega! Ũkĩrĩte gũkũ kũruta Kikuyu.",
-        "description": "Learn Kikuyu grammar, vocabulary, and sentence construction with code-switching support",
+        "description": "Learn Kikuyu grammar, vocabulary, and sentence construction",
         "tts_lang": "en"  # Fallback to English for unsupported languages
     },
     "English": {
@@ -272,18 +272,30 @@ def create_audio_player(audio_bytes, key=None):
 
 def speech_to_text_interface():
     """
-    Speech-to-text interface using Streamlit audio input
+    Enhanced speech-to-text interface with language-specific recognition and AI correction
     """
-    st.markdown("""
+    # Get current language
+    lang_info = SUPPORTED_LANGUAGES.get(st.session_state.selected_language, SUPPORTED_LANGUAGES["Kiswahili"])
+    
+    st.markdown(f"""
     <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                 padding: 1.5rem; border-radius: 0.8rem; margin: 1rem 0; color: white;'>
-        <h4>🎤 Speech Input</h4>
-        <p>Record your voice and we'll convert it to text</p>
+        <h4>🎤 Speech Input ({lang_info['name']})</h4>
+        <p>Record your voice in {lang_info['name']} and we'll convert it to text with AI correction</p>
     </div>
     """, unsafe_allow_html=True)
     
+    # Language code mapping for Google Speech Recognition
+    lang_codes = {
+        "Kiswahili": "sw-KE",  # Swahili (Kenya)
+        "Kikuyu": "en-KE",     # Fallback to English (Kenya) - better for Kikuyu
+        "English": "en-US"     # English (US)
+    }
+    
+    recognition_lang = lang_codes.get(lang_info['name'], "sw-KE")
+    
     # Use Streamlit's audio input
-    audio_value = st.audio_input("🎙️ Click to record your question")
+    audio_value = st.audio_input(f"🎙️ Click to record in {lang_info['name']}")
     
     if audio_value:
         st.success("✅ Audio recorded! Processing...")
@@ -298,26 +310,105 @@ def speech_to_text_interface():
             import speech_recognition as sr
             recognizer = sr.Recognizer()
             
+            # Adjust for ambient noise and energy threshold
+            recognizer.energy_threshold = 4000
+            recognizer.dynamic_energy_threshold = True
+            
             with sr.AudioFile(audio_path) as source:
+                # Adjust for ambient noise
+                recognizer.adjust_for_ambient_noise(source, duration=0.5)
                 audio_data = recognizer.record(source)
                 
-            # Try to recognize speech
+            # Try to recognize speech with language-specific settings
             try:
-                text = recognizer.recognize_google(audio_data)
-                st.success(f"📝 Transcribed: **{text}**")
+                # First attempt: Use language-specific recognition
+                text = recognizer.recognize_google(audio_data, language=recognition_lang)
                 
-                # Store in session state so it can be used
-                if 'transcribed_text' not in st.session_state:
-                    st.session_state.transcribed_text = text
-                else:
-                    st.session_state.transcribed_text = text
-                    
-                st.info("💡 Copy the text above and paste it in the question box below!")
+                st.info(f"🔊 Raw transcription: **{text}**")
+                
+                # Second step: Use AI to correct and improve transcription
+                with st.spinner("🤖 Using AI to improve transcription..."):
+                    llm = initialize_llm()
+                    correction_prompt = f"""You are a {lang_info['name']} language expert. 
+
+A speech recognition system transcribed this audio, but it may have errors because it's not optimized for {lang_info['name']}.
+
+Raw transcription: "{text}"
+Language: {lang_info['name']}
+
+Your task:
+1. Identify likely transcription errors (wrong words, spelling mistakes)
+2. Correct them based on {lang_info['name']} language patterns
+3. Provide the corrected text
+
+Respond in this format:
+CORRECTED: [The corrected text in {lang_info['name']}]
+CONFIDENCE: [high/medium/low]
+EXPLANATION: [Brief explanation of corrections made, if any]
+
+If the transcription looks correct, just return it as is."""
+
+                    try:
+                        response = llm.invoke(correction_prompt)
+                        correction_result = response.content
+                        
+                        # Parse AI response
+                        corrected_text = text  # Default to original
+                        confidence = "medium"
+                        explanation = ""
+                        
+                        if "CORRECTED:" in correction_result:
+                            corrected_text = correction_result.split("CORRECTED:")[1].split("CONFIDENCE:")[0].strip()
+                        
+                        if "CONFIDENCE:" in correction_result:
+                            confidence = correction_result.split("CONFIDENCE:")[1].split("EXPLANATION:")[0].strip()
+                        
+                        if "EXPLANATION:" in correction_result:
+                            explanation = correction_result.split("EXPLANATION:")[1].strip()
+                        
+                        # Display results
+                        st.success(f"✅ **AI-Corrected Text:** {corrected_text}")
+                        
+                        if explanation:
+                            st.info(f"💡 **Corrections made:** {explanation}")
+                        
+                        # Confidence indicator
+                        if confidence.lower() == "high":
+                            st.success("🎯 High confidence in transcription")
+                        elif confidence.lower() == "medium":
+                            st.warning("⚠️ Medium confidence - please verify")
+                        else:
+                            st.error("❌ Low confidence - please check carefully")
+                        
+                        # Store corrected text in session state
+                        st.session_state.transcribed_text = corrected_text
+                        
+                        # Show copy button
+                        st.markdown(f"""
+                        <div style='background: #f0f2f6; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0;'>
+                            <p><strong>📋 Copy this text:</strong></p>
+                            <p style='font-size: 1.2rem; color: #1f1f1f;'>{corrected_text}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        st.info("💡 Copy the text above and paste it in the question box below!")
+                        
+                    except Exception as e:
+                        st.warning(f"AI correction failed: {str(e)}")
+                        st.info(f"Using raw transcription: **{text}**")
+                        st.session_state.transcribed_text = text
                 
             except sr.UnknownValueError:
-                st.error("❌ Could not understand audio. Please speak clearly and try again.")
+                st.error("❌ Could not understand audio. Please try again with:")
+                st.markdown("""
+                - Speak more clearly and slowly
+                - Reduce background noise
+                - Speak closer to the microphone
+                - Try recording in a quieter environment
+                """)
             except sr.RequestError as e:
-                st.error(f"❌ Could not request results; {e}")
+                st.error(f"❌ Speech recognition service error: {e}")
+                st.info("Please check your internet connection and try again.")
                 
         except Exception as e:
             st.error(f"Error processing audio: {str(e)}")
@@ -329,15 +420,23 @@ def speech_to_text_interface():
             except:
                 pass
     else:
-        st.info("""
-        **How to use:**
-        1. Click the microphone button above
-        2. Allow microphone access if prompted
-        3. Speak your question clearly
-        4. Click stop when done
-        5. Your speech will be converted to text
+        st.info(f"""
+        **How to use Speech Input for {lang_info['name']}:**
         
-        **Note:** Requires internet connection for speech recognition.
+        1. 🎤 Click the microphone button above
+        2. 🔴 Allow microphone access if prompted
+        3. 🗣️ Speak your question clearly in {lang_info['name']}
+        4. ⏹️ Click stop when done
+        5. 🤖 AI will transcribe and correct your speech
+        6. 📋 Copy the corrected text to the question box
+        
+        **Tips for better recognition:**
+        - Speak clearly and at a moderate pace
+        - Minimize background noise
+        - Use proper {lang_info['name']} pronunciation
+        - Keep recordings under 30 seconds
+        
+        **Note:** Requires internet connection. AI correction helps fix transcription errors.
         """)
     
     return None
@@ -412,7 +511,8 @@ def initialize_llm():
         model="gemini-2.5-flash",  # Using fast Flash model
         temperature=0.1,  # Lower temperature for faster, more consistent responses
         max_tokens=500,  # Limit tokens for faster generation
-        timeout=10  # 10 second timeout
+        timeout=10,  # 10 second timeout
+        google_api_key=google_api_key  # Explicitly pass API key
     )
 
 def create_language_tutor_prompt():
@@ -422,20 +522,25 @@ def create_language_tutor_prompt():
 
     Guidelines:
     1. Provide clear, simple explanations suitable for all learning levels
-    2. Give examples in both the target language and English
+    2. Give examples in both the target language and English for clarity
     3. Correct mistakes gently and explain why corrections are needed
-    4. Support code-switching (mixing languages) as it's natural in African contexts
-    5. Encourage use of the local language while being patient with learners
+    4. Encourage use of PURE language without mixing with other languages
+       - Teach proper vocabulary in the target language
+       - If learners mix languages, gently guide them to use correct terms in the target language
+       - Discourage code-switching and promote proper language usage
+    5. Be patient with learners while maintaining language purity standards
     6. Provide cultural context when relevant
     7. Generate practice exercises and quizzes when requested
+    8. When learners make spelling errors, correct them and show the right spelling
 
     When analyzing input:
     - For vocabulary: provide meaning, part of speech, usage examples
     - For grammar: explain structure, rules, and common patterns
     - For sentences: check grammar, suggest improvements, offer alternatives
     - For errors: explain mistakes clearly and provide correct versions
+    - For typos: identify the intended word and provide correction with explanation
 
-    Always be encouraging and culturally sensitive.
+    Always be encouraging and culturally sensitive while maintaining language standards.
     
     Context from knowledge base: {context}
     """
@@ -519,31 +624,94 @@ def setup_knowledge_base(language):
         st.warning(f"Knowledge base setup issue: {str(e)}. Using direct LLM mode.")
         return None
 
-def generate_quiz_questions(language, topic="general"):
-    """Generate quiz questions for the selected language"""
-    quiz_prompts = {
-        "vocabulary": [
-            f"What does 'mtu' mean in {language}?",
-            f"Translate 'house' to {language}",
-            f"What is the plural of 'kitabu' in {language}?"
+def generate_quiz_questions(language, num_questions=10):
+    """Generate quiz questions dynamically using AI in the target language"""
+    try:
+        llm = initialize_llm()
+        
+        # Generate questions in the target language
+        quiz_prompt = f"""Generate {num_questions} quiz questions to test {language} language skills.
+
+IMPORTANT RULES:
+1. ALL questions must be written IN {language} (not in English)
+2. Mix different types: vocabulary, grammar, translation, sentence completion
+3. Questions should test real language understanding
+4. Vary difficulty from basic to intermediate
+
+Format each question EXACTLY like this:
+QUESTION: [Question in {language}]
+TYPE: [vocabulary/grammar/translation/sentence]
+DIFFICULTY: [easy/medium/hard]
+---
+
+Example for Kiswahili:
+QUESTION: Neno "nyumba" linamaanisha nini?
+TYPE: vocabulary
+DIFFICULTY: easy
+---
+
+Generate {num_questions} unique questions now:"""
+
+        response = llm.invoke(quiz_prompt)
+        questions_text = response.content
+        
+        # Parse questions
+        questions = []
+        question_blocks = questions_text.split("---")
+        
+        for block in question_blocks:
+            if "QUESTION:" in block:
+                try:
+                    question_text = block.split("QUESTION:")[1].split("TYPE:")[0].strip()
+                    question_type = block.split("TYPE:")[1].split("DIFFICULTY:")[0].strip()
+                    difficulty = block.split("DIFFICULTY:")[1].strip().split("\n")[0].strip()
+                    
+                    questions.append({
+                        "question": question_text,
+                        "category": question_type,
+                        "difficulty": difficulty,
+                        "language": language
+                    })
+                except:
+                    continue
+        
+        # If parsing failed, create fallback questions
+        if len(questions) < 5:
+            questions = generate_fallback_questions(language)
+        
+        return questions[:num_questions]
+    
+    except Exception as e:
+        st.error(f"Error generating quiz: {str(e)}")
+        return generate_fallback_questions(language)
+
+def generate_fallback_questions(language):
+    """Fallback questions if AI generation fails"""
+    fallback = {
+        "Kiswahili": [
+            {"question": "Neno 'mtu' linamaanisha nini?", "category": "vocabulary", "difficulty": "easy", "language": language},
+            {"question": "Tafsiri 'nyumba' kwa Kiingereza", "category": "translation", "difficulty": "easy", "language": language},
+            {"question": "Kamilisha sentensi: 'Mimi ____ kitabu' (ninasoma)", "category": "grammar", "difficulty": "medium", "language": language},
+            {"question": "Nini wingi wa 'kitabu'?", "category": "grammar", "difficulty": "easy", "language": language},
+            {"question": "Andika sentensi kwa wakati uliopita: 'Ninasoma'", "category": "grammar", "difficulty": "medium", "language": language},
         ],
-        "grammar": [
-            f"Complete the sentence in {language}: 'Mimi _____ kitabu' (I am reading a book)",
-            f"What is the correct noun class agreement for 'kitabu kizuri' in {language}?",
-            f"Form the past tense of 'kusoma' (to read) in {language}"
+        "Kikuyu": [
+            {"question": "Nĩ ũndũ ũrĩkũ 'mũndũ' ũrĩ?", "category": "vocabulary", "difficulty": "easy", "language": language},
+            {"question": "Tafsiri 'nyũmba' kwa Kiingereza", "category": "translation", "difficulty": "easy", "language": language},
+            {"question": "Kamilisha: 'Nĩ ____ mũrutani' (ndĩ)", "category": "grammar", "difficulty": "medium", "language": language},
+            {"question": "Nĩ ũrĩkũ wingi wa 'mũndũ'?", "category": "grammar", "difficulty": "easy", "language": language},
+            {"question": "Andika 'gũthoma' kwa wakati ũrĩa ũhĩtũkĩte", "category": "grammar", "difficulty": "medium", "language": language},
+        ],
+        "English": [
+            {"question": "What is the past tense of 'go'?", "category": "grammar", "difficulty": "easy", "language": language},
+            {"question": "Complete: 'She ___ to school every day' (goes/go)", "category": "grammar", "difficulty": "easy", "language": language},
+            {"question": "What is the plural of 'child'?", "category": "vocabulary", "difficulty": "easy", "language": language},
+            {"question": "Choose the correct article: '___ apple' (a/an)", "category": "grammar", "difficulty": "easy", "language": language},
+            {"question": "What does 'beautiful' mean?", "category": "vocabulary", "difficulty": "easy", "language": language},
         ]
     }
     
-    questions = []
-    for category, q_list in quiz_prompts.items():
-        for q in q_list:
-            questions.append({
-                "question": q,
-                "category": category,
-                "language": language
-            })
-    
-    return random.sample(questions, min(5, len(questions)))
+    return fallback.get(language, fallback["English"])
 
 def main():
     # Header
@@ -856,14 +1024,27 @@ def show_quiz_interface(lang_info):
     st.markdown(f"### 🎯 {lang_info['name']} Quiz Practice")
     
     if not st.session_state.quiz_questions:
-        if st.button("🎲 Generate New Quiz"):
-            st.session_state.quiz_questions = generate_quiz_questions(lang_info['name'])
-            st.session_state.current_quiz_index = 0
-            st.session_state.quiz_score = 0
-            st.session_state.quiz_answers = []
+        st.markdown(f"""
+        <div class='feature-box'>
+            <h4>📝 Ready to test your {lang_info['name']} skills?</h4>
+            <p>Get 10 AI-generated questions in {lang_info['name']} to test your knowledge!</p>
+            <ul>
+                <li>Questions are in {lang_info['name']}</li>
+                <li>Mix of vocabulary, grammar, and translation</li>
+                <li>Instant feedback with detailed explanations</li>
+                <li>Pass with 60% or higher</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button("🎲 Generate New Quiz (10 Questions)", use_container_width=True):
+            with st.spinner(f"🤖 Generating {lang_info['name']} quiz questions..."):
+                st.session_state.quiz_questions = generate_quiz_questions(lang_info['name'], num_questions=10)
+                st.session_state.current_quiz_index = 0
+                st.session_state.quiz_score = 0
+                st.session_state.quiz_answers = []
             st.rerun()
         
-        st.info("Click 'Generate New Quiz' to start practicing!")
         return
     
     # Display current question
@@ -877,78 +1058,171 @@ def show_quiz_interface(lang_info):
         st.markdown(f"""
         <div class='quiz-question'>
             <h4>Question {st.session_state.current_quiz_index + 1} of {len(st.session_state.quiz_questions)}</h4>
-            <p><strong>{current_q['question']}</strong></p>
-            <small>Category: {current_q['category'].title()}</small>
+            <p style='font-size: 1.3rem;'><strong>{current_q['question']}</strong></p>
+            <small>📂 Type: {current_q['category'].title()} | 🎯 Difficulty: {current_q.get('difficulty', 'medium').title()}</small>
         </div>
         """, unsafe_allow_html=True)
         
         # Answer input
-        user_answer = st.text_input("Your answer:", key=f"quiz_answer_{st.session_state.current_quiz_index}")
+        user_answer = st.text_area(
+            "Your answer:", 
+            key=f"quiz_answer_{st.session_state.current_quiz_index}",
+            placeholder=f"Type your answer in {lang_info['name']} or English...",
+            height=100
+        )
         
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            if st.button("✅ Submit Answer"):
+            if st.button("✅ Submit Answer", use_container_width=True):
                 if user_answer:
-                    # Evaluate answer using LLM
-                    llm = initialize_llm()
-                    evaluation_prompt = f"""
-                    Question: {current_q['question']}
-                    User's Answer: {user_answer}
-                    Language: {lang_info['name']}
-                    
-                    Evaluate if the answer is correct. Respond in this format:
-                    CORRECT: yes/no
-                    EXPLANATION: Brief explanation
-                    CORRECT_ANSWER: The correct answer if user was wrong
-                    """
-                    
-                    try:
-                        response = llm.invoke(evaluation_prompt)
-                        evaluation = response.content
+                    with st.spinner("🤔 Evaluating your answer..."):
+                        # Evaluate answer using LLM with detailed explanation IN THE TARGET LANGUAGE
+                        llm = initialize_llm()
+                        evaluation_prompt = f"""You are evaluating a {lang_info['name']} language quiz answer.
+
+Question: {current_q['question']}
+Student's Answer: {user_answer}
+Language: {lang_info['name']}
+
+CRITICAL INSTRUCTION: Provide ALL explanations, feedback, and teaching points IN {lang_info['name']} language (not in English).
+
+Evaluate the answer and respond in this EXACT format:
+
+CORRECT: [yes or no]
+
+EXPLANATION: [2-3 sentences IN {lang_info['name']} explaining why the answer is correct or incorrect. Be specific and educational. ALWAYS provide a clear explanation IN {lang_info['name']}.]
+
+CORRECT_ANSWER: [If wrong, provide the correct answer IN {lang_info['name']}. If correct, restate their answer IN {lang_info['name']}.]
+
+TEACHING_POINT: [One key learning point IN {lang_info['name']} from this question]
+
+Example for Kiswahili:
+CORRECT: no
+EXPLANATION: Jibu lako si sahihi. Neno 'nakula' linamaanisha 'I am eating' kwa Kiingereza, sio 'I eat'. Wakati wa sasa unaendelea unatumia 'na-' kabla ya mzizi wa kitenzi.
+CORRECT_ANSWER: Nakula
+TEACHING_POINT: Wakati wa sasa unaendelea unatumia kiambishi 'na-' (mimi nakula, wewe unakula)
+
+Be encouraging and educational. Write EVERYTHING in {lang_info['name']}!"""
                         
-                        # Parse evaluation
-                        is_correct = "yes" in evaluation.lower().split("correct:")[1].split("\n")[0]
-                        
-                        # Store answer
-                        st.session_state.quiz_answers.append({
-                            "question": current_q['question'],
-                            "user_answer": user_answer,
-                            "correct": is_correct,
-                            "evaluation": evaluation
-                        })
-                        
-                        if is_correct:
-                            st.session_state.quiz_score += 1
-                            st.success("✅ Correct! Well done!")
-                        else:
-                            st.error("❌ Incorrect. Let me explain:")
-                        
-                        st.markdown(f"""
-                        <div class='correction-box'>
-                            {evaluation}
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        time.sleep(2)  # Show feedback briefly
-                        st.session_state.current_quiz_index += 1
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error evaluating answer: {str(e)}")
+                        try:
+                            response = llm.invoke(evaluation_prompt)
+                            evaluation = response.content
+                            
+                            # Parse evaluation more robustly
+                            is_correct = False
+                            explanation = "Jaribu tena!" if lang_info['name'] == "Kiswahili" else "Try again!" if lang_info['name'] == "English" else "Geria rĩngĩ!"
+                            correct_answer = ""
+                            teaching_point = ""
+                            
+                            try:
+                                if "CORRECT:" in evaluation:
+                                    correct_line = evaluation.split("CORRECT:")[1].split("\n")[0].strip().lower()
+                                    is_correct = "yes" in correct_line
+                                
+                                if "EXPLANATION:" in evaluation:
+                                    explanation = evaluation.split("EXPLANATION:")[1].split("CORRECT_ANSWER:")[0].strip()
+                                
+                                if "CORRECT_ANSWER:" in evaluation:
+                                    correct_answer = evaluation.split("CORRECT_ANSWER:")[1].split("TEACHING_POINT:")[0].strip()
+                                
+                                if "TEACHING_POINT:" in evaluation:
+                                    teaching_point = evaluation.split("TEACHING_POINT:")[1].strip()
+                            except:
+                                # Fallback if parsing fails
+                                explanation = evaluation
+                            
+                            # Store answer
+                            st.session_state.quiz_answers.append({
+                                "question": current_q['question'],
+                                "user_answer": user_answer,
+                                "correct": is_correct,
+                                "explanation": explanation,
+                                "correct_answer": correct_answer,
+                                "teaching_point": teaching_point
+                            })
+                            
+                            # Language-specific feedback messages
+                            success_messages = {
+                                "Kiswahili": "✅ Sahihi! Umefanya vizuri!",
+                                "Kikuyu": "✅ Nĩ wega! Wĩkĩte wega mũno!",
+                                "English": "✅ Correct! Excellent work!"
+                            }
+                            
+                            error_messages = {
+                                "Kiswahili": "❌ Si sahihi kabisa. Hebu tujifunze kutoka hapa:",
+                                "Kikuyu": "❌ Ti wega. Reke twĩrute kuuma haha:",
+                                "English": "❌ Not quite right. Let's learn from this:"
+                            }
+                            
+                            explanation_headers = {
+                                "Kiswahili": "📚 Maelezo:",
+                                "Kikuyu": "📚 Ũhoro:",
+                                "English": "📚 Explanation:"
+                            }
+                            
+                            correct_answer_headers = {
+                                "Kiswahili": "✓ Jibu Sahihi:",
+                                "Kikuyu": "✓ Macokio Marĩa Mega:",
+                                "English": "✓ Correct Answer:"
+                            }
+                            
+                            learning_headers = {
+                                "Kiswahili": "💡 Somo Muhimu:",
+                                "Kikuyu": "💡 Ũrutani Wa Bata:",
+                                "English": "💡 Key Learning:"
+                            }
+                            
+                            if is_correct:
+                                st.session_state.quiz_score += 1
+                                st.success(success_messages.get(lang_info['name'], success_messages["English"]))
+                            else:
+                                st.error(error_messages.get(lang_info['name'], error_messages["English"]))
+                            
+                            # Show detailed feedback
+                            st.markdown(f"""
+                            <div class='{"feature-box" if is_correct else "correction-box"}'>
+                                <h4>{explanation_headers.get(lang_info['name'], explanation_headers["English"])}</h4>
+                                <p>{explanation}</p>
+                                
+                                {f"<h4>{correct_answer_headers.get(lang_info['name'], correct_answer_headers['English'])}</h4><p><strong>{correct_answer}</strong></p>" if correct_answer else ""}
+                                
+                                {f"<h4>{learning_headers.get(lang_info['name'], learning_headers['English'])}</h4><p>{teaching_point}</p>" if teaching_point else ""}
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Language-specific button text
+                            next_button_text = {
+                                "Kiswahili": "➡️ Swali Linalofuata",
+                                "Kikuyu": "➡️ Kĩũria Kĩrĩa Kĩngĩ",
+                                "English": "➡️ Next Question"
+                            }
+                            
+                            # Auto-advance after showing feedback
+                            if st.button(next_button_text.get(lang_info['name'], next_button_text["English"]), use_container_width=True):
+                                st.session_state.current_quiz_index += 1
+                                st.rerun()
+                            
+                        except Exception as e:
+                            st.error(f"Error evaluating answer: {str(e)}")
+                else:
+                    st.warning("Please enter an answer before submitting!")
         
         with col2:
-            if st.button("⏭️ Skip Question"):
+            if st.button("⏭️ Skip Question", use_container_width=True):
                 st.session_state.quiz_answers.append({
                     "question": current_q['question'],
                     "user_answer": "Skipped",
                     "correct": False,
-                    "evaluation": "Question skipped"
+                    "explanation": "You skipped this question. Try to answer all questions to improve your score!",
+                    "correct_answer": "N/A",
+                    "teaching_point": "Practice makes perfect!"
                 })
                 st.session_state.current_quiz_index += 1
                 st.rerun()
         
         with col3:
-            if st.button("🔄 New Quiz"):
+            if st.button("🔄 New Quiz", use_container_width=True):
                 st.session_state.quiz_questions = []
                 st.session_state.current_quiz_index = 0
                 st.session_state.quiz_score = 0
@@ -979,22 +1253,24 @@ def show_quiz_interface(lang_info):
         """, unsafe_allow_html=True)
         
         # Show detailed results
-        st.markdown("### 📊 Detailed Results")
+        st.markdown("### 📊 Detailed Review")
         
         for i, answer in enumerate(st.session_state.quiz_answers, 1):
             status = "✅" if answer['correct'] else "❌"
             st.markdown(f"""
             <div class='{"feature-box" if answer["correct"] else "correction-box"}'>
-                <strong>{status} Question {i}:</strong> {answer['question']}<br>
-                <strong>Your Answer:</strong> {answer['user_answer']}<br>
-                <strong>Evaluation:</strong> {answer['evaluation']}
+                <h4>{status} Question {i}: {answer['question']}</h4>
+                <p><strong>Your Answer:</strong> {answer['user_answer']}</p>
+                <p><strong>Explanation:</strong> {answer.get('explanation', 'Good attempt!')}</p>
+                {f"<p><strong>Correct Answer:</strong> {answer.get('correct_answer', '')}</p>" if answer.get('correct_answer') else ""}
+                {f"<p><strong>💡 Learning Point:</strong> {answer.get('teaching_point', '')}</p>" if answer.get('teaching_point') else ""}
             </div>
             """, unsafe_allow_html=True)
         
         # Action buttons
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("🔄 Take New Quiz", use_container_width=True):
+            if st.button("🔄 Take New Quiz (Different Questions)", use_container_width=True):
                 st.session_state.quiz_questions = []
                 st.session_state.current_quiz_index = 0
                 st.session_state.quiz_score = 0
@@ -1007,103 +1283,126 @@ def show_quiz_interface(lang_info):
                 st.rerun()
 
 def show_vocabulary_interface(lang_info):
-    """Display vocabulary building interface"""
+    """Display vocabulary building interface with AI-powered search"""
     st.markdown(f"### 📖 {lang_info['name']} Vocabulary Builder")
     
-    # Search vocabulary
-    search_term = st.text_input("🔍 Search for a word:", placeholder="Enter a word in English or " + lang_info['name'])
+    # Search vocabulary - AI-powered for ANY word
+    search_term = st.text_area(
+        "🔍 Search for ANY word or sentence:", 
+        placeholder=f"Enter any word, phrase, or sentence in English or {lang_info['name']}\nExample: 'What does beautiful mean?' or 'How do I say computer?'",
+        height=100
+    )
     
     if search_term:
-        # Load language knowledge and search
-        knowledge_data = load_language_knowledge_from_json(st.session_state.selected_language)
+        st.info("🤖 Using AI to search for your query...")
         
-        if knowledge_data:
-            vocab = knowledge_data.get('vocabulary', {})
-            found = False
-            results = []
-            
-            # Search in basic words (fuzzy search)
-            basic_words = vocab.get('basic_words', {})
-            for word, info in basic_words.items():
-                # Check if search term is in word or meaning (case-insensitive, partial match)
-                if (search_term.lower() in word.lower() or 
-                    search_term.lower() in info.get('meaning', '').lower() or
-                    any(search_term.lower() in ex.lower() for ex in info.get('examples', []))):
-                    found = True
-                    results.append(('word', word, info))
-            
-            # Search in greetings
-            greetings = vocab.get('greetings', {})
-            for greeting, info in greetings.items():
-                if (search_term.lower() in greeting.lower() or 
-                    search_term.lower() in info.get('meaning', '').lower()):
-                    found = True
-                    results.append(('greeting', greeting, info))
-            
-            # Display results
-            if found:
-                st.success(f"✅ Found {len(results)} result(s) for '{search_term}'")
+        # Use AI to answer ANY vocabulary question
+        with st.spinner("🔍 Searching..."):
+            try:
+                # Initialize LLM
+                llm = initialize_llm()
                 
-                for result_type, term, info in results:
-                    if result_type == 'word':
-                        st.markdown(f"""
-                        <div class='feature-box'>
-                            <h4>📚 {term}</h4>
-                            <p><strong>Meaning:</strong> {info.get('meaning', 'N/A')}</p>
-                            <p><strong>Part of Speech:</strong> {info.get('pos', 'N/A')}</p>
-                            {'<p><strong>Plural:</strong> ' + info.get('plural', '') + '</p>' if 'plural' in info else ''}
-                            {'<p><strong>Class:</strong> ' + info.get('class', '') + '</p>' if 'class' in info else ''}
-                            <p><strong>Examples:</strong></p>
-                            <ul>
-                            {''.join(['<li>' + ex + '</li>' for ex in info.get('examples', [])])}
-                            </ul>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:  # greeting
-                        st.markdown(f"""
-                        <div class='feature-box'>
-                            <h4>👋 {term}</h4>
-                            <p><strong>Meaning:</strong> {info.get('meaning', 'N/A')}</p>
-                            <p><strong>Response:</strong> {info.get('response', 'N/A')}</p>
-                            <p><strong>Usage:</strong> {info.get('usage', 'N/A')}</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Add audio button if voice enabled
-                    if st.session_state.voice_enabled:
-                        col1, col2, col3 = st.columns([1, 2, 1])
-                        with col2:
-                            if st.button(f"🔊 Pronounce '{term}'", key=f"vocab_{term}", use_container_width=True):
-                                audio = text_to_speech(term, lang_info['tts_lang'])
-                                if audio:
-                                    create_audio_player(audio, key=f"vocab_audio_{term}")
-            else:
-                st.warning(f"❌ No results found for '{search_term}'")
-                st.info(f"""
-                **Suggestions:**
-                - Try searching for common words like: 'person', 'house', 'read', 'hello'
-                - Browse categories below to explore available vocabulary
-                - Check spelling - some words use special characters (ũ, ĩ, etc.)
+                # Create AI prompt for vocabulary search
+                vocab_prompt = f"""You are a {lang_info['name']} language expert. Answer this vocabulary question:
+
+Question: {search_term}
+
+Provide a comprehensive answer including:
+1. The word/phrase in {lang_info['name']}
+2. Meaning in English
+3. Part of speech (noun, verb, adjective, etc.)
+4. Pronunciation guide if applicable
+5. At least 2-3 example sentences in {lang_info['name']} with English translations
+6. Any cultural context or usage notes
+7. Related words or synonyms
+
+If the user made a spelling error, correct it and provide the right word.
+If asking about multiple words, provide information for each.
+
+Format your response clearly with sections."""
+
+                response = llm.invoke(vocab_prompt)
+                answer = response.content
                 
-                **Available words in {lang_info['name']}:** {', '.join(list(basic_words.keys())[:5])}...
-                """)
-        else:
-            st.error("Could not load vocabulary data.")
+                # Display AI response
+                st.success(f"✅ Found information for: '{search_term}'")
+                
+                st.markdown(f"""
+                <div class='feature-box'>
+                    {answer.replace(chr(10), '<br>')}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Add audio button if voice enabled
+                if st.session_state.voice_enabled:
+                    st.markdown("---")
+                    col1, col2, col3 = st.columns([1, 2, 1])
+                    with col2:
+                        if st.button(f"🔊 Hear pronunciation", key=f"vocab_audio_btn", use_container_width=True):
+                            # Extract the main word from the response for pronunciation
+                            audio = text_to_speech(search_term, lang_info['tts_lang'])
+                            if audio:
+                                create_audio_player(audio, key=f"vocab_audio_player")
+                
+            except Exception as e:
+                st.error(f"Error searching: {str(e)}")
+                st.info("Try rephrasing your question or check your internet connection.")
     else:
-        # Show sample words when no search
-        st.info(f"💡 Try searching for: **person**, **house**, **hello**, or **thank you**")
+        # Show helpful examples when no search
+        st.info(f"""💡 **Try asking:**
+        - "What does 'beautiful' mean in {lang_info['name']}?"
+        - "How do I say 'computer' in {lang_info['name']}?"
+        - "What is the word for 'family'?"
+        - "Translate 'I love you' to {lang_info['name']}"
+        - Any word you want to learn!
+        """)
     
-    # Common vocabulary categories
-    st.markdown("### 📚 Browse by Category")
+    st.markdown("---")
     
-    categories = ["Family", "Food", "Colors", "Numbers", "Greetings", "Time", "Animals", "Body Parts"]
+    # Quick access to common categories
+    st.markdown("### 📚 Quick Category Search")
+    st.caption("Click a category to get common words in that area")
+    
+    categories = {
+        "Family": "family members like mother, father, sister, brother",
+        "Food": "common foods and meals",
+        "Colors": "all color names",
+        "Numbers": "numbers 1-20",
+        "Greetings": "common greetings and responses",
+        "Time": "days, months, time expressions",
+        "Animals": "common animals",
+        "Body Parts": "parts of the body"
+    }
     
     cols = st.columns(4)
-    for i, category in enumerate(categories):
+    for i, (category, description) in enumerate(categories.items()):
         col = cols[i % 4]
         with col:
             if st.button(f"📂 {category}", use_container_width=True, key=f"cat_{category}"):
-                st.info(f"📖 {category} vocabulary coming soon! Use search above to find specific words.")
+                # Use AI to generate vocabulary for this category
+                with st.spinner(f"Loading {category} vocabulary..."):
+                    try:
+                        llm = initialize_llm()
+                        category_prompt = f"""List 10-15 common {description} in {lang_info['name']} with English translations.
+
+Format each entry as:
+- {lang_info['name']} word (English meaning)
+
+Example:
+- mtu (person)
+- nyumba (house)
+
+Provide clear, accurate translations."""
+
+                        response = llm.invoke(category_prompt)
+                        st.markdown(f"""
+                        <div class='feature-box'>
+                            <h4>📂 {category} Vocabulary</h4>
+                            {response.content.replace(chr(10), '<br>')}
+                        </div>
+                        """, unsafe_allow_html=True)
+                    except Exception as e:
+                        st.error(f"Error loading category: {str(e)}")
 
 if __name__ == "__main__":
     main()
