@@ -31,11 +31,9 @@ except:
 if not google_api_key:
     google_api_key = os.getenv("GOOGLE_API_KEY")
 
-# Debug: Print if key is loaded
-if google_api_key:
-    st.sidebar.success(f"✅ API Key loaded: {google_api_key[:20]}...")
-else:
-    st.sidebar.error("❌ API Key not found!")
+# Check if API key is loaded (without displaying it)
+if not google_api_key:
+    st.sidebar.error("❌ API Key not found! Please check your .env file or Streamlit secrets.")
 
 
 if not google_api_key:
