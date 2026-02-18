@@ -1,8 +1,8 @@
 import streamlit as st
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 from dotenv import load_dotenv
@@ -19,29 +19,29 @@ from io import BytesIO
 load_dotenv(override=True)  # Force reload
 
 # Try to get API key from multiple sources (for different deployment platforms)
-google_api_key = None
+openai_api_key = None
 
 # 1. Try Streamlit secrets (for Streamlit Cloud deployment)
 try:
-    google_api_key = st.secrets["GOOGLE_API_KEY"]
+    openai_api_key = st.secrets["OPENAI_API_KEY"]
 except:
     pass
 
 # 2. Try environment variable (for local development and other platforms)
-if not google_api_key:
-    google_api_key = os.getenv("GOOGLE_API_KEY")
+if not openai_api_key:
+    openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Check if API key is loaded (without displaying it)
-if not google_api_key:
-    st.sidebar.error("❌ API Key not found! Please check your .env file or Streamlit secrets.")
+if not openai_api_key:
+    st.sidebar.error("❌ OpenAI API Key not found! Please check your .env file or Streamlit secrets.")
 
 
-if not google_api_key:
-    st.error("⚠️ GOOGLE_API_KEY is not set. Please check your .env file.")
+if not openai_api_key:
+    st.error("⚠️ OPENAI_API_KEY is not set. Please check your .env file.")
     st.info("""
     **To fix this:**
     1. Make sure .env file exists in the project root
-    2. Add this line: GOOGLE_API_KEY=your_actual_key_here
+    2. Add this line: OPENAI_API_KEY=your_actual_key_here
     3. Restart the application
     """)
     st.stop()
@@ -515,12 +515,12 @@ def get_fallback_knowledge(language):
 
 def initialize_llm():
     """Initialize the language model with optimized settings"""
-    return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",  # Using fast Flash model
+    return ChatOpenAI(
+        model="gpt-3.5-turbo",  # Using GPT-3.5 Turbo (fast and cost-effective)
         temperature=0.1,  # Lower temperature for faster, more consistent responses
         max_tokens=500,  # Limit tokens for faster generation
         timeout=10,  # 10 second timeout
-        google_api_key=google_api_key  # Explicitly pass API key
+        openai_api_key=openai_api_key  # Explicitly pass API key
     )
 
 def create_language_tutor_prompt():
@@ -623,8 +623,8 @@ def setup_knowledge_base(language):
         )
         splits = text_splitter.split_documents([doc])
         
-        # Create embeddings and vector store with embedding model
-        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+        # Create embeddings and vector store with OpenAI embedding model
+        embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
         vectorstore = FAISS.from_documents(splits, embeddings)
         
         return vectorstore
