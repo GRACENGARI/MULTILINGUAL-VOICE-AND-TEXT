@@ -625,8 +625,8 @@ def setup_knowledge_base(language):
         )
         splits = text_splitter.split_documents([doc])
         
-        # Create embeddings and vector store with latest embedding model
-        embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+        # Create embeddings and vector store with embedding model
+        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
         vectorstore = FAISS.from_documents(splits, embeddings)
         
         return vectorstore
