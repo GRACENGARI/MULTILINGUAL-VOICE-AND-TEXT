@@ -771,9 +771,10 @@ def setup_knowledge_base(language):
         st.warning(f"Knowledge base setup issue: {str(e)}. Using direct LLM mode.")
         return None
 
-def generate_quiz_questions(language, num_questions=10):
+def generate_quiz_questions(language, num_questions=5):
     """Generate reliable quiz questions from predefined set to prevent hallucinations"""
     # Use predefined questions instead of AI generation to prevent hallucinations
+    # Start with 5 questions, then generate 5 more after completion
     return generate_fallback_questions(language)[:num_questions]
 
 def generate_fallback_questions(language):
@@ -793,114 +794,94 @@ def generate_fallback_questions(language):
         ],
         "Kikuyu": [
             {
-                "id": 11,
-                "question": "Mũndũ nĩ ekũrĩa kĩĩ?",
-                "category": "Verb",
-                "difficulty": "easy",
-                "language": language,
-                "english_reference": "What is the person eating?",
-                "correct_answer": "Irĩo",
-                "acceptable_answers": ["irĩo", "irio", "food", "kamũnyĩ", "kamunyi", "maize"],
-                "explanation": "The verb root is -rĩa (eat)."
-            },
-            {
-                "id": 12,
-                "question": "'Gũthoma' nĩ kuuga atĩa?",
-                "category": "Vocabulary",
-                "difficulty": "easy",
-                "language": language,
-                "english_reference": "What does 'Gũthoma' mean?",
-                "correct_answer": "To read",
-                "acceptable_answers": ["to read", "to study", "read", "study"],
-                "explanation": "Derived from the root -thoma."
-            },
-            {
-                "id": 13,
-                "question": "Nĩ kũrĩ njaũ ekũthiĩ?",
-                "category": "Direction",
-                "difficulty": "easy",
-                "language": language,
-                "english_reference": "Where is the calf going?",
-                "correct_answer": "Nja",
-                "acceptable_answers": ["nja", "outside", "kĩugũ-inĩ", "kiugu-ini", "to the shed", "shed"],
-                "explanation": "The verb is -thiĩ (go)."
-            },
-            {
-                "id": 14,
-                "question": "Mũndũ ũyũ nĩ ekwaria Gĩkũyũ.",
+                "id": 1,
+                "question": "Nĩngwendete nĩ kuaga atĩa na gĩthũngũ?",
                 "category": "Translation",
                 "difficulty": "easy",
                 "language": language,
-                "english_reference": "Translate: This person is speaking Kikuyu.",
-                "correct_answer": "This person is speaking Kikuyu",
-                "acceptable_answers": ["this person is speaking kikuyu", "the person is speaking kikuyu", "he is speaking kikuyu", "she is speaking kikuyu"],
-                "explanation": "The verb -aria means to speak."
+                "correct_answer": "i love you",
+                "acceptable_answers": ["i love you", "love you", "i love u"]
             },
             {
-                "id": 15,
-                "question": "'Kũina' nĩ kuuga atĩa?",
-                "category": "Vocabulary",
-                "difficulty": "easy",
-                "language": language,
-                "english_reference": "What does 'Kũina' mean?",
-                "correct_answer": "To dance",
-                "acceptable_answers": ["to dance", "to sing", "dance", "sing"],
-                "explanation": "Commonly used for both singing and dancing in Gĩkũyũ."
-            },
-            {
-                "id": 16,
-                "question": "Andũ nĩ marathomithio nĩ kĩĩ?",
-                "category": "Passive Verb",
+                "id": 2,
+                "question": "Maitu ---- thoko ũmũthĩ (niarathire/niathire)",
+                "category": "Grammar",
                 "difficulty": "medium",
                 "language": language,
-                "english_reference": "What is teaching the people?",
-                "correct_answer": "Mũrutani",
-                "acceptable_answers": ["mũrutani", "murutani", "teacher", "ai tutor", "tutor"],
-                "explanation": "-thomithio is the passive form of 'to cause to read' (to teach)."
+                "correct_answer": "niathire",
+                "acceptable_answers": ["niathire"]
             },
             {
-                "id": 17,
-                "question": "Ta nũmbe namba kenda.",
+                "id": 3,
+                "question": "Kũina nĩ kuga atĩa na gĩthweri",
+                "category": "Translation",
+                "difficulty": "easy",
+                "language": language,
+                "correct_answer": "singing",
+                "acceptable_answers": ["singing", "to sing", "sing"]
+            },
+            {
+                "id": 4,
+                "question": "Ciana irathomothio nĩ ----- (mwarimũ/mũrũtwo)",
+                "category": "Grammar",
+                "difficulty": "medium",
+                "language": language,
+                "correct_answer": "mwarimũ",
+                "acceptable_answers": ["mwarimũ", "mwarimu"]
+            },
+            {
+                "id": 5,
+                "question": "Mwaki nĩ ------- thaa ici (wakanire/wakana)",
+                "category": "Grammar",
+                "difficulty": "medium",
+                "language": language,
+                "correct_answer": "wakana",
+                "acceptable_answers": ["wakana"]
+            },
+            {
+                "id": 6,
+                "question": "Andika namba kenda",
                 "category": "Numbers",
                 "difficulty": "easy",
                 "language": language,
-                "english_reference": "Name number nine.",
-                "correct_answer": "Kenda",
-                "acceptable_answers": ["kenda", "nine", "9"],
-                "explanation": "Kenda is 9."
+                "correct_answer": "9",
+                "acceptable_answers": ["9", "nine", "kenda"]
             },
             {
-                "id": 18,
-                "question": "Mwana nĩ ekũruga.",
-                "category": "Verb",
-                "difficulty": "easy",
+                "id": 7,
+                "question": "Gikombe gĩkĩ ------ (nĩgĩatũka/nakaunĩka)",
+                "category": "Grammar",
+                "difficulty": "medium",
                 "language": language,
-                "english_reference": "The child is cooking.",
-                "correct_answer": "The child is cooking",
-                "acceptable_answers": ["the child is cooking", "child is cooking", "cooking"],
-                "explanation": "The root -ruga means to cook."
+                "correct_answer": "nĩgĩatũka",
+                "acceptable_answers": ["nĩgĩatũka", "nigiathuka"]
             },
             {
-                "id": 19,
-                "question": "Nĩ atĩa 'Kũnyua'?",
+                "id": 8,
+                "question": "Rangi mũtune ũhana kĩ--- (thakame/iria)",
                 "category": "Vocabulary",
                 "difficulty": "easy",
                 "language": language,
-                "english_reference": "What is 'Kũnyua'?",
-                "correct_answer": "To drink",
-                "acceptable_answers": ["to drink", "drink", "drinking"],
-                "explanation": "The root -nyua means to drink."
+                "correct_answer": "thakame",
+                "acceptable_answers": ["thakame"]
             },
             {
-                "id": 20,
-                "question": "Nĩ kĩĩ kĩrĩa kĩragũrũka?",
-                "category": "Nature",
+                "id": 9,
+                "question": "Ritwa rĩngĩ rĩa mwarimũ nĩ ------ (ndagĩtarĩ/mũrutani)",
+                "category": "Vocabulary",
                 "difficulty": "easy",
                 "language": language,
-                "english_reference": "What is it that is flying?",
-                "correct_answer": "Nyoni",
-                "acceptable_answers": ["nyoni", "bird", "ndege", "airplane", "plane"],
-                "explanation": "The verb -gũrũka means to fly."
+                "correct_answer": "mũrutani",
+                "acceptable_answers": ["mũrutani", "murutani"]
+            },
+            {
+                "id": 10,
+                "question": "kiondo ---- nĩ kĩrataruka (icio/gĩkĩ)",
+                "category": "Grammar",
+                "difficulty": "medium",
+                "language": language,
+                "correct_answer": "gĩkĩ",
+                "acceptable_answers": ["gĩkĩ", "giki"]
             },
         ],
         "English": [
@@ -1293,9 +1274,9 @@ def show_quiz_interface(lang_info):
         </div>
         """, unsafe_allow_html=True)
         
-        if st.button("🎲 Generate New Quiz (10 Questions)", use_container_width=True):
+        if st.button("🎲 Start Quiz (5 Questions)", use_container_width=True):
             with st.spinner(f"🤖 Generating {lang_info['name']} quiz questions..."):
-                st.session_state.quiz_questions = generate_quiz_questions(lang_info['name'], num_questions=10)
+                st.session_state.quiz_questions = generate_quiz_questions(lang_info['name'], num_questions=5)
                 st.session_state.current_quiz_index = 0
                 st.session_state.quiz_score = 0
                 st.session_state.quiz_answers = []
@@ -1474,19 +1455,45 @@ def show_quiz_interface(lang_info):
             """, unsafe_allow_html=True)
         
         # Action buttons
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("🔄 Take New Quiz (Different Questions)", use_container_width=True):
-                st.session_state.quiz_questions = []
-                st.session_state.current_quiz_index = 0
-                st.session_state.quiz_score = 0
-                st.session_state.quiz_answers = []
-                st.rerun()
+        col1, col2, col3 = st.columns(3)
         
-        with col2:
-            if st.button("📚 Back to Learning", use_container_width=True):
-                st.session_state.current_mode = "chat"
-                st.rerun()
+        # Check if this was the first 5 questions (for Kikuyu)
+        if total_questions == 5 and lang_info['name'] == "Kikuyu":
+            with col1:
+                if st.button("➕ Continue with 5 More Questions", use_container_width=True):
+                    # Load questions 6-10
+                    all_questions = generate_fallback_questions(lang_info['name'])
+                    st.session_state.quiz_questions = all_questions[5:10]
+                    st.session_state.current_quiz_index = 0
+                    # Keep the score from first 5
+                    st.session_state.quiz_answers = []
+                    st.rerun()
+            
+            with col2:
+                if st.button("🔄 Restart Quiz", use_container_width=True):
+                    st.session_state.quiz_questions = []
+                    st.session_state.current_quiz_index = 0
+                    st.session_state.quiz_score = 0
+                    st.session_state.quiz_answers = []
+                    st.rerun()
+            
+            with col3:
+                if st.button("📚 Back to Learning", use_container_width=True):
+                    st.session_state.current_mode = "chat"
+                    st.rerun()
+        else:
+            with col1:
+                if st.button("🔄 Take New Quiz", use_container_width=True):
+                    st.session_state.quiz_questions = []
+                    st.session_state.current_quiz_index = 0
+                    st.session_state.quiz_score = 0
+                    st.session_state.quiz_answers = []
+                    st.rerun()
+            
+            with col2:
+                if st.button("📚 Back to Learning", use_container_width=True):
+                    st.session_state.current_mode = "chat"
+                    st.rerun()
 
 def show_vocabulary_interface(lang_info):
     """Display vocabulary building interface with AI-powered search"""
