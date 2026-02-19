@@ -294,7 +294,7 @@ SUPPORTED_LANGUAGES = {
         "name": "Kikuyu",
         "greeting": "Wĩ mwega! Ũkĩrĩte gũkũ kũruta Kikuyu.",
         "description": "Learn Kikuyu grammar, vocabulary, and sentence construction",
-        "tts_lang": "en"  # Fallback to English for unsupported languages
+        "tts_lang": "sw"  # Use Swahili TTS as closest available for Kikuyu
     },
     "English": {
         "code": "en",
@@ -345,6 +345,16 @@ def speech_to_text_interface():
     # Get current language
     lang_info = SUPPORTED_LANGUAGES.get(st.session_state.selected_language, SUPPORTED_LANGUAGES["Kiswahili"])
     
+    # Disable speech input for Kikuyu (not supported by Google Speech Recognition)
+    if lang_info['name'] == "Kikuyu":
+        st.warning("⚠️ Speech input is not available for Kikuyu")
+        st.info("""
+        **Why?** Google's speech recognition doesn't support Kikuyu language yet. 
+        
+        Please type your questions instead. We're working on adding Kikuyu speech support in the future.
+        """)
+        return
+    
     st.markdown(f"""
     <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                 padding: 1.5rem; border-radius: 0.8rem; margin: 1rem 0; color: white;'>
@@ -356,7 +366,6 @@ def speech_to_text_interface():
     # Language code mapping for Google Speech Recognition
     lang_codes = {
         "Kiswahili": "sw-KE",  # Swahili (Kenya)
-        "Kikuyu": "en-KE",     # Fallback to English (Kenya) - better for Kikuyu
         "English": "en-US"     # English (US)
     }
     
@@ -637,26 +646,32 @@ def create_language_tutor_prompt():
     Your role is to help learners master {language} through clear, accurate instruction.
 
     CRITICAL - ANTI-HALLUCINATION RULES FOR GĨKŨYŨ:
-    If teaching Gĩkũyũ (Kikuyu), you MUST follow these strict rules:
+    If teaching Gĩkũyũ (Kikuyu), you MUST follow these STRICT rules:
     
-    1. NEVER use Swahili words when teaching Gĩkũyũ:
-       - WRONG: "habari" → CORRECT: "ũhoro" (news/how are you)
-       - WRONG: "mti" → CORRECT: "mũtĩ" (tree - note the tilde)
-       - WRONG: "kula" → CORRECT: "kũrĩa" (to eat)
-       - WRONG: "asante" → CORRECT: "nĩ wega" (thank you)
-       - WRONG: "watoto" → CORRECT: "ciana" (children)
-       - WRONG: "chakula" → CORRECT: "irĩo" (food)
-       - WRONG: "maji" → CORRECT: "maaĩ" (water)
+    1. NEVER EVER use Swahili words when teaching Gĩkũyũ - this is the #1 error to avoid:
+       - BANNED: "habari" → ONLY USE: "ũhoro" (news/how are you)
+       - BANNED: "mti" → ONLY USE: "mũtĩ" (tree - note the tilde ũ)
+       - BANNED: "kula" → ONLY USE: "kũrĩa" (to eat)
+       - BANNED: "asante" → ONLY USE: "nĩ wega" (thank you)
+       - BANNED: "watoto" → ONLY USE: "ciana" (children)
+       - BANNED: "chakula" → ONLY USE: "irĩo" (food)
+       - BANNED: "maji" → ONLY USE: "maaĩ" (water)
+       - BANNED: "kwenda" → ONLY USE: "gũthiĩ" (to go)
+       - BANNED: "kusoma" → ONLY USE: "gũthoma" (to read)
+       - BANNED: "nyumba" → ONLY USE: "nyũmba" (house - with tilde)
     
-    2. ALWAYS use proper Gĩkũyũ diacritics (tildes and accents):
-       - ũ, ĩ, ĩ are essential - don't omit them
-       - Example: "mũndũ" not "mundu"
+    2. ALWAYS use proper Gĩkũyũ diacritics - they are NOT optional:
+       - ũ, ĩ, ĩ are REQUIRED - never omit them
+       - Example: "mũndũ" NOT "mundu"
+       - Example: "mũtĩ" NOT "mti"
     
-    3. Use ONLY verified Gĩkũyũ vocabulary from the knowledge base
+    3. ONLY use vocabulary from the verified knowledge base provided
     
-    4. If unsure about a Gĩkũyũ word, say "I'm not certain" rather than guessing
+    4. If you don't know a Gĩkũyũ word, say "I'm not certain of the exact Gĩkũyũ word" - DO NOT guess or use Swahili
     
-    5. Cross-check: Does this word sound like Swahili? If yes, find the Gĩkũyũ equivalent
+    5. Before responding, ask yourself: "Does this word sound like Swahili?" If YES, find the Gĩkũyũ equivalent
+    
+    6. DOUBLE-CHECK every word - Swahili contamination is the most common error
 
     TEACHING APPROACH:
     1. Provide accurate, helpful answers to all language questions
@@ -1032,11 +1047,17 @@ def main():
                 help="Automatically play audio for AI responses"
             )
         
-        st.session_state.speech_input_enabled = st.checkbox(
-            "Enable Speech Input (STT)",
-            value=st.session_state.speech_input_enabled,
-            help="Enable speech-to-text for questions"
-        )
+        # Only show speech input for Kiswahili and English (not supported for Kikuyu)
+        if selected_lang_info['name'] != "Kikuyu":
+            st.session_state.speech_input_enabled = st.checkbox(
+                "Enable Speech Input (STT)",
+                value=st.session_state.speech_input_enabled,
+                help="Enable speech-to-text for questions"
+            )
+        else:
+            # Disable speech input for Kikuyu
+            st.session_state.speech_input_enabled = False
+            st.caption("ℹ️ Speech input not available for Kikuyu")
         
         st.markdown("---")
         
@@ -1378,17 +1399,15 @@ def show_quiz_interface(lang_info):
             answer_data = st.session_state.quiz_answers[st.session_state.current_quiz_index]
             
             if answer_data['correct']:
-                # Congratulate in Gĩkũyũ
-                st.success("✅ Nĩ wega! (Well done!)")
-                st.info(f"**Explanation:** {current_q.get('explanation', '')}")
+                # Show success message
+                st.success("✅ Well done!")
             else:
-                # Show error with explanation focusing on verb root
-                st.error("❌ Ti wega. (Not correct.)")
+                # Show error with correct answer
+                st.error("❌ Not correct.")
                 st.info(f"**Correct answer:** {answer_data['correct_answer']}")
-                st.info(f"**Explanation:** {current_q.get('explanation', 'Try again!')}")
             
-            # Show English reference for context
-            if current_q.get('english_reference'):
+            # Show English reference for context (Kikuyu only)
+            if current_q.get('english_reference') and lang_info['name'] == "Kikuyu":
                 st.caption(f"📖 English: {current_q['english_reference']}")
             
             st.markdown("---")
@@ -1450,9 +1469,7 @@ def show_quiz_interface(lang_info):
             <div class='{"feature-box" if answer["correct"] else "correction-box"}'>
                 <h4>{status} Question {i}: {answer['question']}</h4>
                 <p><strong>Your Answer:</strong> {answer['user_answer']}</p>
-                <p><strong>Explanation:</strong> {answer.get('explanation', 'Good attempt!')}</p>
-                {f"<p><strong>Correct Answer:</strong> {answer.get('correct_answer', '')}</p>" if answer.get('correct_answer') else ""}
-                {f"<p><strong>💡 Learning Point:</strong> {answer.get('teaching_point', '')}</p>" if answer.get('teaching_point') else ""}
+                {f"<p><strong>Correct Answer:</strong> {answer.get('correct_answer', '')}</p>" if not answer['correct'] and answer.get('correct_answer') else ""}
             </div>
             """, unsafe_allow_html=True)
         
@@ -1578,16 +1595,12 @@ Format your response clearly with sections."""
             "Numbers": "numbers 1-20"
         }
     else:
-        # Full categories for other languages
+        # Same categories for Kiswahili and English
         categories = {
             "Family": "family members like mother, father, sister, brother",
             "Food": "common foods and meals",
-            "Colors": "all color names",
             "Numbers": "numbers 1-20",
-            "Greetings": "common greetings and responses",
-            "Time": "days, months, time expressions",
-            "Animals": "common animals",
-            "Body Parts": "parts of the body"
+            "Animals": "common animals"
         }
     
     cols = st.columns(4)
