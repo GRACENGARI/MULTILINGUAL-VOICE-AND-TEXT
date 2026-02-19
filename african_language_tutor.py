@@ -1673,15 +1673,21 @@ Format your response clearly with sections."""
     st.markdown("### 📚 Quick Category Search")
     st.caption("Click a category to get common words in that area")
     
-    # Different categories based on language
+    # Different categories based on language with native names
     if lang_info['name'] == "Kikuyu":
         categories = {
-            "Family": "family members like mother, father, sister, brother",
-            "Food": "common foods and meals",
-            "Animals": "common animals"
+            "Bamirii": "family members like mother, father, sister, brother",
+            "Irio": "common foods and meals",
+            "Nyamu": "common animals"
+        }
+    elif lang_info['name'] == "Kiswahili":
+        categories = {
+            "Familia": "family members like mother, father, sister, brother",
+            "Vyakula": "common foods and meals",
+            "Wanyama": "common animals"
         }
     else:
-        # Same categories for Kiswahili and English
+        # English
         categories = {
             "Family": "family members like mother, father, sister, brother",
             "Food": "common foods and meals",
