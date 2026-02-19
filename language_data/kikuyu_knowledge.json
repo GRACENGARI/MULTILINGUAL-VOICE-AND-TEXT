@@ -50,6 +50,36 @@
           "Nyũmba ĩno ĩrĩ na tũnyũmba tũna (This house has four rooms)"
         ]
       },
+      "ngima": {
+        "meaning": "ugali (thick porridge made from maize flour)",
+        "pos": "noun",
+        "class": "n-n",
+        "plural": "ngima",
+        "examples": [
+          "Ngima nĩ irio cia mũthenya o mũthenya (Ugali is everyday food)",
+          "Tũrĩĩaga ngima na mboga (We eat ugali with vegetables)"
+        ]
+      },
+      "irio": {
+        "meaning": "food",
+        "pos": "noun",
+        "class": "i-i",
+        "plural": "irio",
+        "examples": [
+          "Irio nĩ nyingĩ (There is a lot of food)",
+          "Irio cia Agĩkũyũ (Kikuyu food)"
+        ]
+      },
+      "ibuku": {
+        "meaning": "book",
+        "pos": "noun",
+        "class": "i-i",
+        "plural": "mabuku",
+        "examples": [
+          "Ibuku rĩĩrĩ nĩ rĩega (This book is good)",
+          "Ndĩrathoma ibuku (I am reading a book)"
+        ]
+      },
       "gũthoma": {
         "meaning": "to read/study",
         "pos": "verb",
@@ -61,6 +91,26 @@
         "examples": [
           "Ndĩrathoma ibuku (I am reading a book)",
           "Ciana irathoma kũu sukũũni (Children study at school)"
+        ]
+      },
+      "maaĩ": {
+        "meaning": "water",
+        "pos": "noun",
+        "class": "ma",
+        "plural": "maaĩ",
+        "examples": [
+          "Maaĩ nĩ marĩ (The water is cold)",
+          "Ndĩranyua maaĩ (I am drinking water)"
+        ]
+      },
+      "kĩrĩma": {
+        "meaning": "mountain/hill",
+        "pos": "noun",
+        "class": "ki-i",
+        "plural": "irĩma",
+        "examples": [
+          "Kĩrĩma kĩrĩa nĩ kĩraihu (That mountain is tall)",
+          "Irĩma cia Kenya (Mountains of Kenya)"
         ]
       }
     },

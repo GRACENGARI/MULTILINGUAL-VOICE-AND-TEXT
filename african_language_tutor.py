@@ -220,6 +220,66 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Gĩkũyũ Dictionary - Verified vocabulary to prevent hallucinations
+GIKUYU_DICTIONARY = {
+    "nouns": {
+        "mũndũ": "person (singular)",
+        "andũ": "people (plural)",
+        "mũtĩ": "tree",
+        "mĩtĩ": "trees",
+        "mwana": "child",
+        "ciana": "children",
+        "njũĩ": "river",
+        "nyũmba": "house",
+        "ng'ombe": "cow",
+        "mbũri": "goat",
+        "ũhoro": "news/information/matter"
+    },
+    "verbs": {
+        "gũthoma": "to read / to study",
+        "kũrĩa": "to eat",
+        "kũnyua": "to drink",
+        "gũthiĩ": "to go",
+        "kwaria": "to speak",
+        "kũina": "to sing / to dance",
+        "kũruga": "to cook",
+        "gũkenera": "to enjoy / be happy"
+    },
+    "greetings_phrases": {
+        "ũhoro waku": "how are you? (singular)",
+        "ũhoro wanyu": "how are you? (plural)",
+        "nĩ wega": "thank you / it is good",
+        "nuu": "who",
+        "kĩĩ": "what",
+        "atĩa": "how"
+    },
+    "numbers": {
+        "ĩmwe": "1",
+        "igĩrĩ": "2",
+        "ithatũ": "3",
+        "inya": "4",
+        "ithano": "5",
+        "mũgwanja": "7",
+        "nyanya": "8",
+        "kenda": "9",
+        "ikũmi": "10"
+    }
+}
+
+# Hallucination Blacklist - Swahili words that GPT-4 incorrectly uses for Gĩkũyũ
+GIKUYU_HALLUCINATION_BLACKLIST = {
+    "habari": {"correct": "ũhoro", "note": "AI often uses Swahili 'habari' instead of Gĩkũyũ 'ũhoro'"},
+    "mti": {"correct": "mũtĩ", "note": "Missing tilde (ũ) - this is Swahili, not Gĩkũyũ"},
+    "kula": {"correct": "kũrĩa", "note": "AI defaults to Swahili 'kula' instead of Gĩkũyũ 'kũrĩa'"},
+    "asante": {"correct": "nĩ wega", "note": "Common greeting hallucination - use Gĩkũyũ 'nĩ wega'"},
+    "watoto": {"correct": "ciana", "note": "Use Gĩkũyũ 'ciana' for plural 'children'"},
+    "nyumba": {"correct": "nyũmba", "note": "Missing tilde - ensure proper Gĩkũyũ spelling"},
+    "chakula": {"correct": "irĩo", "note": "Swahili word - use Gĩkũyũ 'irĩo' for food"},
+    "maji": {"correct": "maaĩ", "note": "Use Gĩkũyũ 'maaĩ' with proper diacritics"},
+    "kwenda": {"correct": "gũthiĩ", "note": "Swahili verb - use Gĩkũyũ 'gũthiĩ'"},
+    "kusoma": {"correct": "gũthoma", "note": "Swahili infinitive - use Gĩkũyũ 'gũthoma'"}
+}
+
 # Supported languages configuration
 SUPPORTED_LANGUAGES = {
     "Kiswahili": {
@@ -513,44 +573,108 @@ def get_fallback_knowledge(language):
         "cultural_context": [f"{language} is an important African language with rich cultural heritage"]
     }
 
+def detect_gikuyu_hallucinations(text):
+    """
+    Detect Swahili/Sheng hallucinations in Gĩkũyũ responses
+    Returns: (has_hallucinations, corrections_list)
+    """
+    if not text:
+        return False, []
+    
+    text_lower = text.lower()
+    corrections = []
+    
+    # Check for blacklisted Swahili words
+    for swahili_word, correction_info in GIKUYU_HALLUCINATION_BLACKLIST.items():
+        # Use word boundaries to avoid partial matches
+        import re
+        pattern = r'\b' + re.escape(swahili_word) + r'\b'
+        if re.search(pattern, text_lower):
+            corrections.append({
+                "error": swahili_word,
+                "correct": correction_info["correct"],
+                "note": correction_info["note"]
+            })
+    
+    return len(corrections) > 0, corrections
+
+def validate_gikuyu_response(response_text, lang_info):
+    """
+    Validate Gĩkũyũ responses and correct hallucinations
+    """
+    if lang_info['name'] != "Kikuyu":
+        return response_text, False, []
+    
+    has_errors, corrections = detect_gikuyu_hallucinations(response_text)
+    
+    if has_errors:
+        # Create correction message
+        corrected_text = response_text
+        for correction in corrections:
+            import re
+            pattern = r'\b' + re.escape(correction["error"]) + r'\b'
+            corrected_text = re.sub(pattern, correction["correct"], corrected_text, flags=re.IGNORECASE)
+        
+        return corrected_text, True, corrections
+    
+    return response_text, False, []
+
 def initialize_llm():
-    """Initialize the language model with optimized settings"""
+    """Initialize GPT-4 with minimal temperature to maximize factual accuracy"""
     return ChatOpenAI(
-        model="gpt-3.5-turbo",  # Using GPT-3.5 Turbo (fast and cost-effective)
-        temperature=0.1,  # Lower temperature for faster, more consistent responses
+        model="gpt-4",  # GPT-4 has much better knowledge of African languages
+        temperature=0.0,  # Zero temperature for maximum factual accuracy and minimal hallucination
         max_tokens=500,  # Limit tokens for faster generation
-        timeout=10,  # 10 second timeout
+        timeout=30,  # 30 second timeout for GPT-4
         openai_api_key=openai_api_key  # Explicitly pass API key
     )
 
 def create_language_tutor_prompt():
-    """Create specialized prompt for language tutoring"""
+    """Create specialized prompt leveraging GPT-4's strong multilingual capabilities"""
     system_prompt = """You are an expert AI tutor for African languages, specializing in {language}. 
-    Your role is to help learners improve their grammar, vocabulary, and sentence construction.
+    You are powered by GPT-4 and have strong knowledge of African languages.
 
-    Guidelines:
-    1. Provide clear, simple explanations suitable for all learning levels
-    2. Give examples in both the target language and English for clarity
-    3. Correct mistakes gently and explain why corrections are needed
-    4. Encourage use of PURE language without mixing with other languages
-       - Teach proper vocabulary in the target language
-       - If learners mix languages, gently guide them to use correct terms in the target language
-       - Discourage code-switching and promote proper language usage
-    5. Be patient with learners while maintaining language purity standards
-    6. Provide cultural context when relevant
-    7. Generate practice exercises and quizzes when requested
-    8. When learners make spelling errors, correct them and show the right spelling
+    Your role is to help learners master {language} through clear, accurate instruction.
 
-    When analyzing input:
-    - For vocabulary: provide meaning, part of speech, usage examples
-    - For grammar: explain structure, rules, and common patterns
-    - For sentences: check grammar, suggest improvements, offer alternatives
-    - For errors: explain mistakes clearly and provide correct versions
-    - For typos: identify the intended word and provide correction with explanation
-
-    Always be encouraging and culturally sensitive while maintaining language standards.
+    CRITICAL - ANTI-HALLUCINATION RULES FOR GĨKŨYŨ:
+    If teaching Gĩkũyũ (Kikuyu), you MUST follow these strict rules:
     
-    Context from knowledge base: {context}
+    1. NEVER use Swahili words when teaching Gĩkũyũ:
+       - WRONG: "habari" → CORRECT: "ũhoro" (news/how are you)
+       - WRONG: "mti" → CORRECT: "mũtĩ" (tree - note the tilde)
+       - WRONG: "kula" → CORRECT: "kũrĩa" (to eat)
+       - WRONG: "asante" → CORRECT: "nĩ wega" (thank you)
+       - WRONG: "watoto" → CORRECT: "ciana" (children)
+       - WRONG: "chakula" → CORRECT: "irĩo" (food)
+       - WRONG: "maji" → CORRECT: "maaĩ" (water)
+    
+    2. ALWAYS use proper Gĩkũyũ diacritics (tildes and accents):
+       - ũ, ĩ, ĩ are essential - don't omit them
+       - Example: "mũndũ" not "mundu"
+    
+    3. Use ONLY verified Gĩkũyũ vocabulary from the knowledge base
+    
+    4. If unsure about a Gĩkũyũ word, say "I'm not certain" rather than guessing
+    
+    5. Cross-check: Does this word sound like Swahili? If yes, find the Gĩkũyũ equivalent
+
+    TEACHING APPROACH:
+    1. Provide accurate, helpful answers to all language questions
+    2. Give clear explanations with practical examples
+    3. Teach proper vocabulary, grammar, and pronunciation
+    4. Encourage pure language usage without code-switching
+    5. Correct mistakes gently with clear explanations
+    6. Provide cultural context and usage notes
+    7. Be encouraging and supportive
+
+    When responding:
+    - For vocabulary: provide meaning, part of speech, pronunciation, and usage examples
+    - For grammar: explain structure, rules, and patterns with clear examples
+    - For sentences: analyze grammar and suggest improvements
+    - For translations: provide accurate translations with context
+    - Be conversational, educational, and accurate
+
+    Knowledge base context: {context}
     """
     
     return ChatPromptTemplate.from_messages([
@@ -633,89 +757,148 @@ def setup_knowledge_base(language):
         return None
 
 def generate_quiz_questions(language, num_questions=10):
-    """Generate quiz questions dynamically using AI in the target language"""
-    try:
-        llm = initialize_llm()
-        
-        # Generate questions in the target language
-        quiz_prompt = f"""Generate {num_questions} quiz questions to test {language} language skills.
-
-IMPORTANT RULES:
-1. ALL questions must be written IN {language} (not in English)
-2. Mix different types: vocabulary, grammar, translation, sentence completion
-3. Questions should test real language understanding
-4. Vary difficulty from basic to intermediate
-
-Format each question EXACTLY like this:
-QUESTION: [Question in {language}]
-TYPE: [vocabulary/grammar/translation/sentence]
-DIFFICULTY: [easy/medium/hard]
----
-
-Example for Kiswahili:
-QUESTION: Neno "nyumba" linamaanisha nini?
-TYPE: vocabulary
-DIFFICULTY: easy
----
-
-Generate {num_questions} unique questions now:"""
-
-        response = llm.invoke(quiz_prompt)
-        questions_text = response.content
-        
-        # Parse questions
-        questions = []
-        question_blocks = questions_text.split("---")
-        
-        for block in question_blocks:
-            if "QUESTION:" in block:
-                try:
-                    question_text = block.split("QUESTION:")[1].split("TYPE:")[0].strip()
-                    question_type = block.split("TYPE:")[1].split("DIFFICULTY:")[0].strip()
-                    difficulty = block.split("DIFFICULTY:")[1].strip().split("\n")[0].strip()
-                    
-                    questions.append({
-                        "question": question_text,
-                        "category": question_type,
-                        "difficulty": difficulty,
-                        "language": language
-                    })
-                except:
-                    continue
-        
-        # If parsing failed, create fallback questions
-        if len(questions) < 5:
-            questions = generate_fallback_questions(language)
-        
-        return questions[:num_questions]
-    
-    except Exception as e:
-        st.error(f"Error generating quiz: {str(e)}")
-        return generate_fallback_questions(language)
+    """Generate reliable quiz questions from predefined set to prevent hallucinations"""
+    # Use predefined questions instead of AI generation to prevent hallucinations
+    return generate_fallback_questions(language)[:num_questions]
 
 def generate_fallback_questions(language):
-    """Fallback questions if AI generation fails"""
+    """Curated, verified questions for each language"""
     fallback = {
         "Kiswahili": [
-            {"question": "Neno 'mtu' linamaanisha nini?", "category": "vocabulary", "difficulty": "easy", "language": language},
-            {"question": "Tafsiri 'nyumba' kwa Kiingereza", "category": "translation", "difficulty": "easy", "language": language},
-            {"question": "Kamilisha sentensi: 'Mimi ____ kitabu' (ninasoma)", "category": "grammar", "difficulty": "medium", "language": language},
-            {"question": "Nini wingi wa 'kitabu'?", "category": "grammar", "difficulty": "easy", "language": language},
-            {"question": "Andika sentensi kwa wakati uliopita: 'Ninasoma'", "category": "grammar", "difficulty": "medium", "language": language},
+            {"question": "Neno 'mtu' linamaanisha nini?", "category": "vocabulary", "difficulty": "easy", "language": language, "correct_answer": "person", "acceptable_answers": ["person", "human", "mtu", "somebody"]},
+            {"question": "Tafsiri 'nyumba' kwa Kiingereza", "category": "translation", "difficulty": "easy", "language": language, "correct_answer": "house", "acceptable_answers": ["house", "home", "building"]},
+            {"question": "Kamilisha sentensi: 'Mimi ____ kitabu' (soma)", "category": "grammar", "difficulty": "medium", "language": language, "correct_answer": "ninasoma", "acceptable_answers": ["ninasoma", "nasoma"]},
+            {"question": "Nini wingi wa 'kitabu'?", "category": "grammar", "difficulty": "easy", "language": language, "correct_answer": "vitabu", "acceptable_answers": ["vitabu", "books"]},
+            {"question": "Tafsiri 'I am eating' kwa Kiswahili", "category": "translation", "difficulty": "medium", "language": language, "correct_answer": "ninakula", "acceptable_answers": ["ninakula", "nakula"]},
+            {"question": "Neno 'chakula' linamaanisha nini?", "category": "vocabulary", "difficulty": "easy", "language": language, "correct_answer": "food", "acceptable_answers": ["food", "meal", "chakula"]},
+            {"question": "Kamilisha: 'Wewe ____ wapi?' (enda)", "category": "grammar", "difficulty": "medium", "language": language, "correct_answer": "unaenda", "acceptable_answers": ["unaenda", "unaenda", "unakwenda"]},
+            {"question": "Tafsiri 'water' kwa Kiswahili", "category": "translation", "difficulty": "easy", "language": language, "correct_answer": "maji", "acceptable_answers": ["maji"]},
+            {"question": "Nini wingi wa 'mtu'?", "category": "grammar", "difficulty": "easy", "language": language, "correct_answer": "watu", "acceptable_answers": ["watu", "people"]},
+            {"question": "Tafsiri 'Ninasoma kitabu' kwa Kiingereza", "category": "translation", "difficulty": "medium", "language": language, "correct_answer": "i am reading a book", "acceptable_answers": ["i am reading a book", "i'm reading a book", "i read a book"]},
         ],
         "Kikuyu": [
-            {"question": "Nĩ ũndũ ũrĩkũ 'mũndũ' ũrĩ?", "category": "vocabulary", "difficulty": "easy", "language": language},
-            {"question": "Tafsiri 'nyũmba' kwa Kiingereza", "category": "translation", "difficulty": "easy", "language": language},
-            {"question": "Kamilisha: 'Nĩ ____ mũrutani' (ndĩ)", "category": "grammar", "difficulty": "medium", "language": language},
-            {"question": "Nĩ ũrĩkũ wingi wa 'mũndũ'?", "category": "grammar", "difficulty": "easy", "language": language},
-            {"question": "Andika 'gũthoma' kwa wakati ũrĩa ũhĩtũkĩte", "category": "grammar", "difficulty": "medium", "language": language},
+            {
+                "id": 11,
+                "question": "Mũndũ nĩ ekũrĩa kĩĩ?",
+                "category": "Verb",
+                "difficulty": "easy",
+                "language": language,
+                "english_reference": "What is the person eating?",
+                "correct_answer": "Irĩo",
+                "acceptable_answers": ["irĩo", "irio", "food", "kamũnyĩ", "kamunyi", "maize"],
+                "explanation": "The verb root is -rĩa (eat)."
+            },
+            {
+                "id": 12,
+                "question": "'Gũthoma' nĩ kuuga atĩa?",
+                "category": "Vocabulary",
+                "difficulty": "easy",
+                "language": language,
+                "english_reference": "What does 'Gũthoma' mean?",
+                "correct_answer": "To read",
+                "acceptable_answers": ["to read", "to study", "read", "study"],
+                "explanation": "Derived from the root -thoma."
+            },
+            {
+                "id": 13,
+                "question": "Nĩ kũrĩ njaũ ekũthiĩ?",
+                "category": "Direction",
+                "difficulty": "easy",
+                "language": language,
+                "english_reference": "Where is the calf going?",
+                "correct_answer": "Nja",
+                "acceptable_answers": ["nja", "outside", "kĩugũ-inĩ", "kiugu-ini", "to the shed", "shed"],
+                "explanation": "The verb is -thiĩ (go)."
+            },
+            {
+                "id": 14,
+                "question": "Mũndũ ũyũ nĩ ekwaria Gĩkũyũ.",
+                "category": "Translation",
+                "difficulty": "easy",
+                "language": language,
+                "english_reference": "Translate: This person is speaking Kikuyu.",
+                "correct_answer": "This person is speaking Kikuyu",
+                "acceptable_answers": ["this person is speaking kikuyu", "the person is speaking kikuyu", "he is speaking kikuyu", "she is speaking kikuyu"],
+                "explanation": "The verb -aria means to speak."
+            },
+            {
+                "id": 15,
+                "question": "'Kũina' nĩ kuuga atĩa?",
+                "category": "Vocabulary",
+                "difficulty": "easy",
+                "language": language,
+                "english_reference": "What does 'Kũina' mean?",
+                "correct_answer": "To dance",
+                "acceptable_answers": ["to dance", "to sing", "dance", "sing"],
+                "explanation": "Commonly used for both singing and dancing in Gĩkũyũ."
+            },
+            {
+                "id": 16,
+                "question": "Andũ nĩ marathomithio nĩ kĩĩ?",
+                "category": "Passive Verb",
+                "difficulty": "medium",
+                "language": language,
+                "english_reference": "What is teaching the people?",
+                "correct_answer": "Mũrutani",
+                "acceptable_answers": ["mũrutani", "murutani", "teacher", "ai tutor", "tutor"],
+                "explanation": "-thomithio is the passive form of 'to cause to read' (to teach)."
+            },
+            {
+                "id": 17,
+                "question": "Ta nũmbe namba kenda.",
+                "category": "Numbers",
+                "difficulty": "easy",
+                "language": language,
+                "english_reference": "Name number nine.",
+                "correct_answer": "Kenda",
+                "acceptable_answers": ["kenda", "nine", "9"],
+                "explanation": "Kenda is 9."
+            },
+            {
+                "id": 18,
+                "question": "Mwana nĩ ekũruga.",
+                "category": "Verb",
+                "difficulty": "easy",
+                "language": language,
+                "english_reference": "The child is cooking.",
+                "correct_answer": "The child is cooking",
+                "acceptable_answers": ["the child is cooking", "child is cooking", "cooking"],
+                "explanation": "The root -ruga means to cook."
+            },
+            {
+                "id": 19,
+                "question": "Nĩ atĩa 'Kũnyua'?",
+                "category": "Vocabulary",
+                "difficulty": "easy",
+                "language": language,
+                "english_reference": "What is 'Kũnyua'?",
+                "correct_answer": "To drink",
+                "acceptable_answers": ["to drink", "drink", "drinking"],
+                "explanation": "The root -nyua means to drink."
+            },
+            {
+                "id": 20,
+                "question": "Nĩ kĩĩ kĩrĩa kĩragũrũka?",
+                "category": "Nature",
+                "difficulty": "easy",
+                "language": language,
+                "english_reference": "What is it that is flying?",
+                "correct_answer": "Nyoni",
+                "acceptable_answers": ["nyoni", "bird", "ndege", "airplane", "plane"],
+                "explanation": "The verb -gũrũka means to fly."
+            },
         ],
         "English": [
-            {"question": "What is the past tense of 'go'?", "category": "grammar", "difficulty": "easy", "language": language},
-            {"question": "Complete: 'She ___ to school every day' (goes/go)", "category": "grammar", "difficulty": "easy", "language": language},
-            {"question": "What is the plural of 'child'?", "category": "vocabulary", "difficulty": "easy", "language": language},
-            {"question": "Choose the correct article: '___ apple' (a/an)", "category": "grammar", "difficulty": "easy", "language": language},
-            {"question": "What does 'beautiful' mean?", "category": "vocabulary", "difficulty": "easy", "language": language},
+            {"question": "What is the past tense of 'go'?", "category": "grammar", "difficulty": "easy", "language": language, "correct_answer": "went", "acceptable_answers": ["went"]},
+            {"question": "Complete: 'She ___ to school every day' (goes/go)", "category": "grammar", "difficulty": "easy", "language": language, "correct_answer": "goes", "acceptable_answers": ["goes"]},
+            {"question": "What is the plural of 'child'?", "category": "vocabulary", "difficulty": "easy", "language": language, "correct_answer": "children", "acceptable_answers": ["children"]},
+            {"question": "Choose the correct article: '___ apple' (a/an)", "category": "grammar", "difficulty": "easy", "language": language, "correct_answer": "an", "acceptable_answers": ["an"]},
+            {"question": "What does 'beautiful' mean?", "category": "vocabulary", "difficulty": "easy", "language": language, "correct_answer": "attractive", "acceptable_answers": ["attractive", "pretty", "good-looking", "lovely"]},
+            {"question": "Complete: 'I ___ a student' (am/is/are)", "category": "grammar", "difficulty": "easy", "language": language, "correct_answer": "am", "acceptable_answers": ["am"]},
+            {"question": "What is the past tense of 'eat'?", "category": "grammar", "difficulty": "easy", "language": language, "correct_answer": "ate", "acceptable_answers": ["ate"]},
+            {"question": "Choose: 'He ___ playing' (is/are)", "category": "grammar", "difficulty": "easy", "language": language, "correct_answer": "is", "acceptable_answers": ["is"]},
+            {"question": "What is the plural of 'mouse'?", "category": "vocabulary", "difficulty": "medium", "language": language, "correct_answer": "mice", "acceptable_answers": ["mice"]},
+            {"question": "Complete: 'They ___ happy' (is/are)", "category": "grammar", "difficulty": "easy", "language": language, "correct_answer": "are", "acceptable_answers": ["are"]},
         ]
     }
     
@@ -985,7 +1168,7 @@ def show_chat_interface(lang_info):
             handle_chat_query(user_input, vectorstore, llm, lang_info)
 
 def handle_chat_query(query, vectorstore, llm, lang_info):
-    """Process chat query and generate response"""
+    """Process chat query leveraging GPT-4's strong language capabilities"""
     st.session_state.chat_history.append({"role": "user", "content": query})
     
     with st.spinner("🤔 Thinking..."):
@@ -996,19 +1179,67 @@ def handle_chat_query(query, vectorstore, llm, lang_info):
             # Retrieve relevant context if vectorstore available
             context = ""
             if vectorstore:
-                retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+                retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
                 docs = retriever.get_relevant_documents(query)
-                context = "\n\n".join([doc.page_content for doc in docs])
+                if docs:
+                    context = "\n\n".join([doc.page_content for doc in docs])
+            
+            # Add Gĩkũyũ dictionary to context if teaching Kikuyu
+            if lang_info['name'] == "Kikuyu":
+                dictionary_context = "\n\nVERIFIED GĨKŨYŨ VOCABULARY (use ONLY these):\n"
+                dictionary_context += "\nNouns:\n"
+                for word, meaning in GIKUYU_DICTIONARY["nouns"].items():
+                    dictionary_context += f"- {word}: {meaning}\n"
+                dictionary_context += "\nVerbs:\n"
+                for word, meaning in GIKUYU_DICTIONARY["verbs"].items():
+                    dictionary_context += f"- {word}: {meaning}\n"
+                dictionary_context += "\nGreetings/Phrases:\n"
+                for word, meaning in GIKUYU_DICTIONARY["greetings_phrases"].items():
+                    dictionary_context += f"- {word}: {meaning}\n"
+                dictionary_context += "\nNumbers:\n"
+                for word, meaning in GIKUYU_DICTIONARY["numbers"].items():
+                    dictionary_context += f"- {word}: {meaning}\n"
+                
+                context = dictionary_context + "\n\n" + context
+            
+            # Provide context
+            if context:
+                context_instruction = f"Relevant knowledge base information:\n\n{context}\n\nUse this as reference along with your GPT-4 knowledge to provide accurate, helpful answers."
+            else:
+                context_instruction = f"Use your GPT-4 knowledge of {lang_info['name']} to provide accurate, helpful guidance."
             
             # Format prompt with context
             formatted_prompt = prompt_template.format_messages(
                 language=lang_info['name'],
-                context=context if context else "No specific context available.",
+                context=context_instruction,
                 input=query
             )
+            
             # Generate response
             response = llm.invoke(formatted_prompt)
             answer = response.content
+            
+            # Validate and correct Gĩkũyũ responses for hallucinations
+            corrected_answer, had_errors, corrections = validate_gikuyu_response(answer, lang_info)
+            
+            # If hallucinations were detected, show warning
+            if had_errors:
+                st.warning("⚠️ Hallucination detected and corrected!")
+                
+                # Show what was corrected
+                with st.expander("🔍 See what was corrected"):
+                    st.markdown("**Swahili/Sheng words incorrectly used:**")
+                    for correction in corrections:
+                        st.markdown(f"""
+                        <div class='correction-box'>
+                            <p>❌ <strong>Error:</strong> {correction['error']}</p>
+                            <p>✅ <strong>Correct Gĩkũyũ:</strong> {correction['correct']}</p>
+                            <p>💡 <strong>Note:</strong> {correction['note']}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                # Use corrected answer
+                answer = corrected_answer
             
             st.session_state.chat_history.append({"role": "assistant", "content": answer})
             
@@ -1067,171 +1298,115 @@ def show_quiz_interface(lang_info):
         </div>
         """, unsafe_allow_html=True)
         
-        # Answer input
-        user_answer = st.text_area(
-            "Your answer:", 
-            key=f"quiz_answer_{st.session_state.current_quiz_index}",
-            placeholder=f"Type your answer in {lang_info['name']} or English...",
-            height=100
-        )
+        # Check if this question has been answered
+        question_answered = len(st.session_state.quiz_answers) > st.session_state.current_quiz_index
         
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            if st.button("✅ Submit Answer", use_container_width=True):
-                if user_answer:
-                    with st.spinner("🤔 Evaluating your answer..."):
-                        # Evaluate answer using LLM with detailed explanation IN THE TARGET LANGUAGE
-                        llm = initialize_llm()
-                        evaluation_prompt = f"""You are evaluating a {lang_info['name']} language quiz answer.
-
-Question: {current_q['question']}
-Student's Answer: {user_answer}
-Language: {lang_info['name']}
-
-CRITICAL INSTRUCTION: Provide ALL explanations, feedback, and teaching points IN {lang_info['name']} language (not in English).
-
-Evaluate the answer and respond in this EXACT format:
-
-CORRECT: [yes or no]
-
-EXPLANATION: [2-3 sentences IN {lang_info['name']} explaining why the answer is correct or incorrect. Be specific and educational. ALWAYS provide a clear explanation IN {lang_info['name']}.]
-
-CORRECT_ANSWER: [If wrong, provide the correct answer IN {lang_info['name']}. If correct, restate their answer IN {lang_info['name']}.]
-
-TEACHING_POINT: [One key learning point IN {lang_info['name']} from this question]
-
-Example for Kiswahili:
-CORRECT: no
-EXPLANATION: Jibu lako si sahihi. Neno 'nakula' linamaanisha 'I am eating' kwa Kiingereza, sio 'I eat'. Wakati wa sasa unaendelea unatumia 'na-' kabla ya mzizi wa kitenzi.
-CORRECT_ANSWER: Nakula
-TEACHING_POINT: Wakati wa sasa unaendelea unatumia kiambishi 'na-' (mimi nakula, wewe unakula)
-
-Be encouraging and educational. Write EVERYTHING in {lang_info['name']}!"""
+        if not question_answered:
+            # Show answer input and submit button
+            user_answer = st.text_area(
+                "Your answer:", 
+                key=f"quiz_answer_{st.session_state.current_quiz_index}",
+                placeholder=f"Type your answer in {lang_info['name']} or English...",
+                height=100
+            )
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                if st.button("✅ Submit Answer", use_container_width=True):
+                    if user_answer:
+                        # Simple string matching - NO AI evaluation
+                        user_lower = user_answer.lower().strip()
                         
-                        try:
-                            response = llm.invoke(evaluation_prompt)
-                            evaluation = response.content
-                            
-                            # Parse evaluation more robustly
-                            is_correct = False
-                            explanation = "Jaribu tena!" if lang_info['name'] == "Kiswahili" else "Try again!" if lang_info['name'] == "English" else "Geria rĩngĩ!"
-                            correct_answer = ""
-                            teaching_point = ""
-                            
-                            try:
-                                if "CORRECT:" in evaluation:
-                                    correct_line = evaluation.split("CORRECT:")[1].split("\n")[0].strip().lower()
-                                    is_correct = "yes" in correct_line
-                                
-                                if "EXPLANATION:" in evaluation:
-                                    explanation = evaluation.split("EXPLANATION:")[1].split("CORRECT_ANSWER:")[0].strip()
-                                
-                                if "CORRECT_ANSWER:" in evaluation:
-                                    correct_answer = evaluation.split("CORRECT_ANSWER:")[1].split("TEACHING_POINT:")[0].strip()
-                                
-                                if "TEACHING_POINT:" in evaluation:
-                                    teaching_point = evaluation.split("TEACHING_POINT:")[1].strip()
-                            except:
-                                # Fallback if parsing fails
-                                explanation = evaluation
-                            
-                            # Store answer
-                            st.session_state.quiz_answers.append({
-                                "question": current_q['question'],
-                                "user_answer": user_answer,
-                                "correct": is_correct,
-                                "explanation": explanation,
-                                "correct_answer": correct_answer,
-                                "teaching_point": teaching_point
-                            })
-                            
-                            # Language-specific feedback messages
-                            success_messages = {
-                                "Kiswahili": "✅ Sahihi! Umefanya vizuri!",
-                                "Kikuyu": "✅ Nĩ wega! Wĩkĩte wega mũno!",
-                                "English": "✅ Correct! Excellent work!"
-                            }
-                            
-                            error_messages = {
-                                "Kiswahili": "❌ Si sahihi kabisa. Hebu tujifunze kutoka hapa:",
-                                "Kikuyu": "❌ Ti wega. Reke twĩrute kuuma haha:",
-                                "English": "❌ Not quite right. Let's learn from this:"
-                            }
-                            
-                            explanation_headers = {
-                                "Kiswahili": "📚 Maelezo:",
-                                "Kikuyu": "📚 Ũhoro:",
-                                "English": "📚 Explanation:"
-                            }
-                            
-                            correct_answer_headers = {
-                                "Kiswahili": "✓ Jibu Sahihi:",
-                                "Kikuyu": "✓ Macokio Marĩa Mega:",
-                                "English": "✓ Correct Answer:"
-                            }
-                            
-                            learning_headers = {
-                                "Kiswahili": "💡 Somo Muhimu:",
-                                "Kikuyu": "💡 Ũrutani Wa Bata:",
-                                "English": "💡 Key Learning:"
-                            }
-                            
-                            if is_correct:
-                                st.session_state.quiz_score += 1
-                                st.success(success_messages.get(lang_info['name'], success_messages["English"]))
-                            else:
-                                st.error(error_messages.get(lang_info['name'], error_messages["English"]))
-                            
-                            # Show detailed feedback
-                            st.markdown(f"""
-                            <div class='{"feature-box" if is_correct else "correction-box"}'>
-                                <h4>{explanation_headers.get(lang_info['name'], explanation_headers["English"])}</h4>
-                                <p>{explanation}</p>
-                                
-                                {f"<h4>{correct_answer_headers.get(lang_info['name'], correct_answer_headers['English'])}</h4><p><strong>{correct_answer}</strong></p>" if correct_answer else ""}
-                                
-                                {f"<h4>{learning_headers.get(lang_info['name'], learning_headers['English'])}</h4><p>{teaching_point}</p>" if teaching_point else ""}
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            # Language-specific button text
-                            next_button_text = {
-                                "Kiswahili": "➡️ Swali Linalofuata",
-                                "Kikuyu": "➡️ Kĩũria Kĩrĩa Kĩngĩ",
-                                "English": "➡️ Next Question"
-                            }
-                            
-                            # Auto-advance after showing feedback
-                            if st.button(next_button_text.get(lang_info['name'], next_button_text["English"]), use_container_width=True):
-                                st.session_state.current_quiz_index += 1
-                                st.rerun()
-                            
-                        except Exception as e:
-                            st.error(f"Error evaluating answer: {str(e)}")
-                else:
-                    st.warning("Please enter an answer before submitting!")
+                        # Get acceptable answers
+                        acceptable_answers = current_q.get('acceptable_answers', [current_q.get('correct_answer', '')])
+                        
+                        # Check if answer matches any acceptable answer
+                        is_correct = any(user_lower == ans.lower().strip() for ans in acceptable_answers)
+                        
+                        # Language-specific feedback
+                        if lang_info['name'] == "Kiswahili":
+                            correct_msg = "Sahihi! Umefanya vizuri!"
+                            incorrect_msg = "Si sahihi. Jaribu tena!"
+                        elif lang_info['name'] == "Kikuyu":
+                            correct_msg = "Nĩ wega! Wĩkĩte wega mũno!"
+                            incorrect_msg = "Ti wega. Geria rĩngĩ!"
+                        else:
+                            correct_msg = "Correct! Excellent work!"
+                            incorrect_msg = "Not quite right. Try again!"
+                        
+                        # Store answer
+                        st.session_state.quiz_answers.append({
+                            "question": current_q['question'],
+                            "user_answer": user_answer,
+                            "correct": is_correct,
+                            "explanation": current_q.get('explanation', ''),
+                            "correct_answer": current_q.get('correct_answer', ''),
+                            "teaching_point": ""
+                        })
+                        
+                        if is_correct:
+                            st.session_state.quiz_score += 1
+                        
+                        st.rerun()
+                    else:
+                        st.warning("Please enter an answer before submitting!")
+            
+            with col2:
+                if st.button("⏭️ Skip Question", use_container_width=True):
+                    st.session_state.quiz_answers.append({
+                        "question": current_q['question'],
+                        "user_answer": "Skipped",
+                        "correct": False,
+                        "explanation": "You skipped this question.",
+                        "correct_answer": current_q.get('correct_answer', ''),
+                        "teaching_point": ""
+                    })
+                    st.session_state.current_quiz_index += 1
+                    st.rerun()
+            
+            with col3:
+                if st.button("🔄 New Quiz", use_container_width=True):
+                    st.session_state.quiz_questions = []
+                    st.session_state.current_quiz_index = 0
+                    st.session_state.quiz_score = 0
+                    st.session_state.quiz_answers = []
+                    st.rerun()
         
-        with col2:
-            if st.button("⏭️ Skip Question", use_container_width=True):
-                st.session_state.quiz_answers.append({
-                    "question": current_q['question'],
-                    "user_answer": "Skipped",
-                    "correct": False,
-                    "explanation": "You skipped this question. Try to answer all questions to improve your score!",
-                    "correct_answer": "N/A",
-                    "teaching_point": "Practice makes perfect!"
-                })
-                st.session_state.current_quiz_index += 1
-                st.rerun()
-        
-        with col3:
-            if st.button("🔄 New Quiz", use_container_width=True):
-                st.session_state.quiz_questions = []
-                st.session_state.current_quiz_index = 0
-                st.session_state.quiz_score = 0
-                st.session_state.quiz_answers = []
-                st.rerun()
+        else:
+            # Question has been answered - show feedback and Next button
+            answer_data = st.session_state.quiz_answers[st.session_state.current_quiz_index]
+            
+            if answer_data['correct']:
+                # Congratulate in Gĩkũyũ
+                st.success("✅ Nĩ wega! (Well done!)")
+                st.info(f"**Explanation:** {current_q.get('explanation', '')}")
+            else:
+                # Show error with explanation focusing on verb root
+                st.error("❌ Ti wega. (Not correct.)")
+                st.info(f"**Correct answer:** {answer_data['correct_answer']}")
+                st.info(f"**Explanation:** {current_q.get('explanation', 'Try again!')}")
+            
+            # Show English reference for context
+            if current_q.get('english_reference'):
+                st.caption(f"📖 English: {current_q['english_reference']}")
+            
+            st.markdown("---")
+            
+            # Language-specific button text
+            if lang_info['name'] == "Kiswahili":
+                next_text = "➡️ Swali Linalofuata"
+            elif lang_info['name'] == "Kikuyu":
+                next_text = "➡️ Kĩũria Kĩrĩa Kĩngĩ"
+            else:
+                next_text = "➡️ Next Question"
+            
+            # Prominent Next button OUTSIDE all nested blocks
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                if st.button(next_text, type="primary", use_container_width=True, key=f"next_btn_{st.session_state.current_quiz_index}"):
+                    st.session_state.current_quiz_index += 1
+                    st.rerun()
     
     else:
         # Quiz completed - show results
@@ -1242,19 +1417,29 @@ Be encouraging and educational. Write EVERYTHING in {lang_info['name']}!"""
         # Determine pass/fail
         passed = percentage >= 60  # 60% passing grade
         
-        st.markdown(f"""
-        <div style='background: linear-gradient(135deg, {"#4CAF50" if passed else "#f44336"} 0%, {"#8BC34A" if passed else "#e57373"} 100%);
-                    padding: 2rem; border-radius: 1rem; color: white; text-align: center; margin: 2rem 0;'>
-            <h2>{'🎉 Congratulations! You Passed!' if passed else '📚 Keep Practicing!'}</h2>
-            <h1 style='font-size: 3rem; margin: 1rem 0;'>{score}/{total_questions}</h1>
-            <h3>{percentage:.1f}%</h3>
-            <p style='font-size: 1.2rem; margin-top: 1rem;'>
-                {'Excellent work! You have a strong understanding.' if percentage >= 80 
-                 else 'Good job! You passed the quiz.' if passed 
-                 else "Don't worry! Review the material and try again."}
-            </p>
+        # Determine colors and messages
+        bg_color = "#4CAF50" if passed else "#f44336"
+        accent_color = "#8BC34A" if passed else "#e57373"
+        title = "🎉 Congratulations! You Passed!" if passed else "📚 Keep Practicing!"
+        
+        if percentage >= 80:
+            message = "Excellent work! You have a strong understanding."
+        elif passed:
+            message = "Good job! You passed the quiz."
+        else:
+            message = "Do not worry! Review the material and try again."
+        
+        # Display results without complex f-string
+        percentage_display = f"{percentage:.1f}%"
+        result_html = f"""
+        <div style="background: linear-gradient(135deg, {bg_color} 0%, {accent_color} 100%); padding: 2rem; border-radius: 1rem; color: white; text-align: center; margin: 2rem 0;">
+            <h2>{title}</h2>
+            <h1 style="font-size: 3rem; margin: 1rem 0;">{score}/{total_questions}</h1>
+            <h3>{percentage_display}</h3>
+            <p style="font-size: 1.2rem; margin-top: 1rem;">{message}</p>
         </div>
-        """, unsafe_allow_html=True)
+        """
+        st.markdown(result_html, unsafe_allow_html=True)
         
         # Show detailed results
         st.markdown("### 📊 Detailed Review")
@@ -1306,7 +1491,7 @@ def show_vocabulary_interface(lang_info):
                 # Initialize LLM
                 llm = initialize_llm()
                 
-                # Create AI prompt for vocabulary search
+                # Create AI prompt for vocabulary search with anti-hallucination instructions
                 vocab_prompt = f"""You are a {lang_info['name']} language expert. Answer this vocabulary question:
 
 Question: {search_term}
@@ -1328,8 +1513,25 @@ Format your response clearly with sections."""
                 response = llm.invoke(vocab_prompt)
                 answer = response.content
                 
+                # Validate for hallucinations if Gĩkũyũ
+                corrected_answer, had_errors, corrections = validate_gikuyu_response(answer, lang_info)
+                
                 # Display AI response
                 st.success(f"✅ Found information for: '{search_term}'")
+                
+                # Show hallucination warning if detected
+                if had_errors:
+                    st.warning("⚠️ Hallucination detected and corrected!")
+                    with st.expander("🔍 See what was corrected"):
+                        for correction in corrections:
+                            st.markdown(f"""
+                            <div class='correction-box'>
+                                <p>❌ <strong>Error:</strong> {correction['error']}</p>
+                                <p>✅ <strong>Correct:</strong> {correction['correct']}</p>
+                                <p>💡 {correction['note']}</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                    answer = corrected_answer
                 
                 st.markdown(f"""
                 <div class='feature-box'>
@@ -1353,7 +1555,7 @@ Format your response clearly with sections."""
                 st.info("Try rephrasing your question or check your internet connection.")
     else:
         # Show helpful examples when no search
-        st.info(f"""💡 **Try asking:**
+        st.info(f"""Try asking:
         - "What does 'beautiful' mean in {lang_info['name']}?"
         - "How do I say 'computer' in {lang_info['name']}?"
         - "What is the word for 'family'?"
@@ -1367,27 +1569,54 @@ Format your response clearly with sections."""
     st.markdown("### 📚 Quick Category Search")
     st.caption("Click a category to get common words in that area")
     
-    categories = {
-        "Family": "family members like mother, father, sister, brother",
-        "Food": "common foods and meals",
-        "Colors": "all color names",
-        "Numbers": "numbers 1-20",
-        "Greetings": "common greetings and responses",
-        "Time": "days, months, time expressions",
-        "Animals": "common animals",
-        "Body Parts": "parts of the body"
-    }
+    # Different categories based on language
+    if lang_info['name'] == "Kikuyu":
+        categories = {
+            "Family": "family members like mother, father, sister, brother",
+            "Food": "common foods and meals",
+            "Animals": "common animals",
+            "Numbers": "numbers 1-20"
+        }
+    else:
+        # Full categories for other languages
+        categories = {
+            "Family": "family members like mother, father, sister, brother",
+            "Food": "common foods and meals",
+            "Colors": "all color names",
+            "Numbers": "numbers 1-20",
+            "Greetings": "common greetings and responses",
+            "Time": "days, months, time expressions",
+            "Animals": "common animals",
+            "Body Parts": "parts of the body"
+        }
     
     cols = st.columns(4)
+    
+    # Initialize session state for selected category
+    if 'selected_vocab_category' not in st.session_state:
+        st.session_state.selected_vocab_category = None
+    
     for i, (category, description) in enumerate(categories.items()):
         col = cols[i % 4]
         with col:
             if st.button(f"📂 {category}", use_container_width=True, key=f"cat_{category}"):
-                # Use AI to generate vocabulary for this category
-                with st.spinner(f"Loading {category} vocabulary..."):
-                    try:
-                        llm = initialize_llm()
-                        category_prompt = f"""List 10-15 common {description} in {lang_info['name']} with English translations.
+                st.session_state.selected_vocab_category = (category, description)
+                st.rerun()
+    
+    # Display selected category content
+    if st.session_state.selected_vocab_category:
+        category, description = st.session_state.selected_vocab_category
+        
+        # Clear button
+        if st.button("🔙 Back to Categories", key="back_to_categories"):
+            st.session_state.selected_vocab_category = None
+            st.rerun()
+        
+        # Use AI to generate vocabulary for this category
+        with st.spinner(f"Loading {category} vocabulary..."):
+            try:
+                llm = initialize_llm()
+                category_prompt = f"""List 10-15 common {description} in {lang_info['name']} with English translations.
 
 Format each entry as:
 - {lang_info['name']} word (English meaning)
@@ -1398,15 +1627,24 @@ Example:
 
 Provide clear, accurate translations."""
 
-                        response = llm.invoke(category_prompt)
-                        st.markdown(f"""
-                        <div class='feature-box'>
-                            <h4>📂 {category} Vocabulary</h4>
-                            {response.content.replace(chr(10), '<br>')}
-                        </div>
-                        """, unsafe_allow_html=True)
-                    except Exception as e:
-                        st.error(f"Error loading category: {str(e)}")
+                response = llm.invoke(category_prompt)
+                category_answer = response.content
+                
+                # Validate for hallucinations if Gĩkũyũ
+                corrected_answer, had_errors, corrections = validate_gikuyu_response(category_answer, lang_info)
+                
+                if had_errors:
+                    st.warning("⚠️ Hallucinations corrected in this list")
+                    category_answer = corrected_answer
+                
+                st.markdown(f"""
+                <div class='feature-box'>
+                    <h4>📂 {category} Vocabulary</h4>
+                    {category_answer.replace(chr(10), '<br>')}
+                </div>
+                """, unsafe_allow_html=True)
+            except Exception as e:
+                st.error(f"Error loading category: {str(e)}")
 
 if __name__ == "__main__":
     main()
