@@ -1678,19 +1678,17 @@ Format your response clearly with sections."""
         categories = {
             "Family": "family members like mother, father, sister, brother",
             "Food": "common foods and meals",
-            "Animals": "common animals",
-            "Numbers": "numbers 1-20"
+            "Animals": "common animals"
         }
     else:
         # Same categories for Kiswahili and English
         categories = {
             "Family": "family members like mother, father, sister, brother",
             "Food": "common foods and meals",
-            "Numbers": "numbers 1-20",
             "Animals": "common animals"
         }
     
-    cols = st.columns(4)
+    cols = st.columns(3)
     
     # Initialize session state for selected category
     if 'selected_vocab_category' not in st.session_state:
