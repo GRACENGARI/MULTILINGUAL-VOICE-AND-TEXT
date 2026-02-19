@@ -1089,6 +1089,11 @@ def main():
         if st.button("🔄 Change Language"):
             st.session_state.selected_language = None
             st.session_state.chat_history = []
+            # Clear quiz state when changing language
+            st.session_state.quiz_questions = []
+            st.session_state.current_quiz_index = 0
+            st.session_state.quiz_score = 0
+            st.session_state.quiz_answers = []
             st.rerun()
         
         st.markdown("---")
