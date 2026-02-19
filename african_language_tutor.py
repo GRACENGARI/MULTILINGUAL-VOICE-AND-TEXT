@@ -781,16 +781,96 @@ def generate_fallback_questions(language):
     """Curated, verified questions for each language"""
     fallback = {
         "Kiswahili": [
-            {"question": "Neno 'mtu' linamaanisha nini?", "category": "vocabulary", "difficulty": "easy", "language": language, "correct_answer": "person", "acceptable_answers": ["person", "human", "mtu", "somebody"]},
-            {"question": "Tafsiri 'nyumba' kwa Kiingereza", "category": "translation", "difficulty": "easy", "language": language, "correct_answer": "house", "acceptable_answers": ["house", "home", "building"]},
-            {"question": "Kamilisha sentensi: 'Mimi ____ kitabu' (soma)", "category": "grammar", "difficulty": "medium", "language": language, "correct_answer": "ninasoma", "acceptable_answers": ["ninasoma", "nasoma"]},
-            {"question": "Nini wingi wa 'kitabu'?", "category": "grammar", "difficulty": "easy", "language": language, "correct_answer": "vitabu", "acceptable_answers": ["vitabu", "books"]},
-            {"question": "Tafsiri 'I am eating' kwa Kiswahili", "category": "translation", "difficulty": "medium", "language": language, "correct_answer": "ninakula", "acceptable_answers": ["ninakula", "nakula"]},
-            {"question": "Neno 'chakula' linamaanisha nini?", "category": "vocabulary", "difficulty": "easy", "language": language, "correct_answer": "food", "acceptable_answers": ["food", "meal", "chakula"]},
-            {"question": "Kamilisha: 'Wewe ____ wapi?' (enda)", "category": "grammar", "difficulty": "medium", "language": language, "correct_answer": "unaenda", "acceptable_answers": ["unaenda", "unaenda", "unakwenda"]},
-            {"question": "Tafsiri 'water' kwa Kiswahili", "category": "translation", "difficulty": "easy", "language": language, "correct_answer": "maji", "acceptable_answers": ["maji"]},
-            {"question": "Nini wingi wa 'mtu'?", "category": "grammar", "difficulty": "easy", "language": language, "correct_answer": "watu", "acceptable_answers": ["watu", "people"]},
-            {"question": "Tafsiri 'Ninasoma kitabu' kwa Kiingereza", "category": "translation", "difficulty": "medium", "language": language, "correct_answer": "i am reading a book", "acceptable_answers": ["i am reading a book", "i'm reading a book", "i read a book"]},
+            {
+                "id": 1,
+                "question": "-----amelia sana (Mtoto/Kitoto)",
+                "category": "Grammar",
+                "difficulty": "easy",
+                "language": language,
+                "correct_answer": "mtoto",
+                "acceptable_answers": ["mtoto"]
+            },
+            {
+                "id": 2,
+                "question": "Kamilisha sentensi: 'Mimi ____ kitabu' (soma)",
+                "category": "Grammar",
+                "difficulty": "medium",
+                "language": language,
+                "correct_answer": "nasoma",
+                "acceptable_answers": ["nasoma", "ninasoma"]
+            },
+            {
+                "id": 3,
+                "question": "Tafsiri 'nyumba' kwa Kiingereza",
+                "category": "Translation",
+                "difficulty": "easy",
+                "language": language,
+                "correct_answer": "house",
+                "acceptable_answers": ["house", "home"]
+            },
+            {
+                "id": 4,
+                "question": "Wingi wa kitabu ni",
+                "category": "Grammar",
+                "difficulty": "easy",
+                "language": language,
+                "correct_answer": "vitabu",
+                "acceptable_answers": ["vitabu"]
+            },
+            {
+                "id": 5,
+                "question": "Tafsiri 'I am eating' kwa Kiswahili",
+                "category": "Translation",
+                "difficulty": "medium",
+                "language": language,
+                "correct_answer": "ninakula",
+                "acceptable_answers": ["ninakula", "nakula"]
+            },
+            {
+                "id": 6,
+                "question": "Kamilisha: 'Wewe ____ wapi?' (enda)",
+                "category": "Grammar",
+                "difficulty": "medium",
+                "language": language,
+                "correct_answer": "unaenda",
+                "acceptable_answers": ["unaenda", "unakwenda"]
+            },
+            {
+                "id": 7,
+                "question": "mzee ---- mkoba (amebeba/amebebwa)",
+                "category": "Grammar",
+                "difficulty": "medium",
+                "language": language,
+                "correct_answer": "amebeba",
+                "acceptable_answers": ["amebeba"]
+            },
+            {
+                "id": 8,
+                "question": "'Ninasoma kitabu' kwa Kiingereza",
+                "category": "Translation",
+                "difficulty": "medium",
+                "language": language,
+                "correct_answer": "i am reading a book",
+                "acceptable_answers": ["i am reading a book", "i'm reading a book", "am reading a book"]
+            },
+            {
+                "id": 9,
+                "question": "-----wa watu (umati/kamati)",
+                "category": "Vocabulary",
+                "difficulty": "easy",
+                "language": language,
+                "correct_answer": "umati",
+                "acceptable_answers": ["umati"]
+            },
+            {
+                "id": 10,
+                "question": "kanusha 'keti'",
+                "category": "Vocabulary",
+                "difficulty": "easy",
+                "language": language,
+                "correct_answer": "simama",
+                "acceptable_answers": ["simama", "stand"]
+            },
         ],
         "Kikuyu": [
             {
@@ -1457,8 +1537,8 @@ def show_quiz_interface(lang_info):
         # Action buttons
         col1, col2, col3 = st.columns(3)
         
-        # Check if this was the first 5 questions (for Kikuyu)
-        if total_questions == 5 and lang_info['name'] == "Kikuyu":
+        # Check if this was the first 5 questions (for Kikuyu and Kiswahili)
+        if total_questions == 5 and lang_info['name'] in ["Kikuyu", "Kiswahili"]:
             with col1:
                 if st.button("➕ Continue with 5 More Questions", use_container_width=True):
                     # Load questions 6-10
